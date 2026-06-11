@@ -97,7 +97,8 @@ spawnLoc.Parent = trackFolder
 -- Chain segments from the front edge of the pad
 local cursor = START_CF * CFrame.new(0, 0, -20) -- road grows in -Z (forward)
 for i, seg in SEGMENTS do
-	cursor = cursor * CFrame.Angles(0, math.rad(seg.yawDeg / 2), 0) * CFrame.Angles(math.rad(-seg.pitchDeg), 0, 0)
+	-- negative pitch tilts the road's forward (-Z) downward: LookVector.Y = sin(pitch)
+	cursor = cursor * CFrame.Angles(0, math.rad(seg.yawDeg / 2), 0) * CFrame.Angles(math.rad(seg.pitchDeg), 0, 0)
 	local mid = cursor * CFrame.new(0, 0, -seg.length / 2)
 	if not seg.gap then
 		local road = makePart(
@@ -117,7 +118,7 @@ for i, seg in SEGMENTS do
 			)
 		end
 	end
-	cursor = cursor * CFrame.new(0, 0, -seg.length) * CFrame.Angles(math.rad(seg.pitchDeg), 0, 0)
+	cursor = cursor * CFrame.new(0, 0, -seg.length) * CFrame.Angles(math.rad(-seg.pitchDeg), 0, 0)
 		* CFrame.Angles(0, math.rad(seg.yawDeg / 2), 0)
 	dropNode(cursor)
 end
