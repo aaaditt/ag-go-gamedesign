@@ -84,6 +84,16 @@ kartSpawn.WorldCFrame = START_CF * CFrame.new(0, 4, -5)
 kartSpawn.Parent = pad
 dropNode(START_CF * CFrame.new(0, 0, -5))
 
+-- Avatar spawns on the pad (not at world origin) before being seated in the kart
+local spawnLoc = Instance.new("SpawnLocation")
+spawnLoc.Size = Vector3.new(8, 1, 8)
+spawnLoc.CFrame = START_CF * CFrame.new(0, 2, 12)
+spawnLoc.Anchored = true
+spawnLoc.Neutral = true
+spawnLoc.Transparency = 1
+spawnLoc.Duration = 0
+spawnLoc.Parent = trackFolder
+
 -- Chain segments from the front edge of the pad
 local cursor = START_CF * CFrame.new(0, 0, -20) -- road grows in -Z (forward)
 for i, seg in SEGMENTS do

@@ -131,11 +131,20 @@ local function spawnKartFor(player: Player, character: Model)
 	end
 end
 
-Players.PlayerAdded:Connect(function(player)
+local function hookPlayer(player: Player)
 	player.CharacterAdded:Connect(function(character)
 		spawnKartFor(player, character)
 	end)
-end)
+	-- Play Solo race condition: the character often exists before this script runs
+	if player.Character then
+		task.spawn(spawnKartFor, player, player.Character)
+	end
+end
+
+Players.PlayerAdded:Connect(hookPlayer)
+for _, player in Players:GetPlayers() do
+	hookPlayer(player)
+end
 
 Players.PlayerRemoving:Connect(function(player)
 	local kart = kartsByPlayer[player]
