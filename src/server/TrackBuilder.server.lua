@@ -5,6 +5,13 @@
 
 local ServerStorage = game:GetService("ServerStorage")
 
+-- If a track already exists (hand-edited in Studio and saved with the place),
+-- do nothing: the editor-authored track is the source of truth.
+if workspace:FindFirstChild("Track") then
+	print("[TrackBuilder] Track already present in workspace — skipping procedural build")
+	return
+end
+
 local ROAD_WIDTH = 42
 local ROAD_THICKNESS = 3
 local RAIL_HEIGHT = 4

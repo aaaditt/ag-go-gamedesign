@@ -1,4 +1,8 @@
+# Rojo binary (vendored, downloaded per machine)
 /bin/
-*.rbxl
-*.rbxlx
+
+# Rojo build artifacts
+build-test.rbxl
 *.rbxl.lock
+
+# NOTE: place.rbxl IS committed — it holds the hand-edited track/world.
