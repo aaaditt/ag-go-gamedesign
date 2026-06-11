@@ -297,6 +297,7 @@ RunService.Heartbeat:Connect(function(dt)
 		end
 
 		mover.MaxForce = math.huge
+		mover.VelocityConstraintMode = Enum.VelocityConstraintMode.Vector
 		mover.VectorVelocity = velDir * speed - normal * Tuning.StickForce
 
 		-- orient to heading + slope
@@ -305,11 +306,14 @@ RunService.Heartbeat:Connect(function(dt)
 		local fwd = fwdOnSlope
 		aligner.CFrame = CFrame.fromMatrix(Vector3.zero, right, upOnSlope, -fwd)
 	else
-		-- airborne: keep XZ momentum; gravity owns Y (feed current Y back in each frame)
+		-- airborne: mover controls ONLY the horizontal plane; gravity fully owns Y
+		-- (Vector mode with huge force was cancelling gravity = the "gliding" bug)
 		mover.MaxForce = math.huge
-		local current = chassis.AssemblyLinearVelocity
+		mover.VelocityConstraintMode = Enum.VelocityConstraintMode.Plane
+		mover.PrimaryTangentAxis = Vector3.xAxis
+		mover.SecondaryTangentAxis = Vector3.zAxis
 		local flat = Vector3.new(headingDir.X, 0, headingDir.Z).Unit * speed
-		mover.VectorVelocity = Vector3.new(flat.X, current.Y, flat.Z)
+		mover.PlaneVelocity = Vector2.new(flat.X, flat.Z)
 
 		-- level out slowly toward heading
 		local levelCF = CFrame.fromOrientation(0, heading, 0)
