@@ -6,9 +6,16 @@ return {
 	-- Speed model
 	BaseTopSpeed = 90, -- studs/s, stock kart cap
 	SlopeAccelFactor = 1.6, -- multiplier on gravity-along-forward when descending
+	UphillDecelFactor = 0.35, -- fraction of uphill decel applied (arcade momentum rule)
 	FlowAssist = 8, -- studs/s^2 constant downhill-direction assist so flats never stall
 	Drag = 0.35, -- /s, produces terminal velocity feel
 	OffTrackDragMult = 3.0, -- extra drag off the road surface
+
+	-- Hover suspension (docs/11): the kart floats; it never collides with the road
+	RideHeight = 2.5, -- studs between chassis underside and road
+	HoverGain = 10, -- servo strength toward ride height
+	HoverMaxVel = 60, -- cap on vertical correction speed
+	GroundRayMargin = 4, -- ray length beyond ride height (slope tolerance)
 
 	-- Slingshot launch
 	LaunchChargeTime = 1.5, -- seconds of hold to reach full power

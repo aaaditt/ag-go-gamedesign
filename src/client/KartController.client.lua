@@ -206,12 +206,39 @@ end)
 local rayParams = RaycastParams.new()
 rayParams.FilterType = Enum.RaycastFilterType.Exclude
 
-local function groundCast(): RaycastResult?
+-- Hover suspension sampling (docs/11): 4 corner rays, averaged.
+-- Returns grounded, average ground Y under the chassis, average surface normal.
+local CORNER_OFFSETS = {
+	Vector3.new(0.8, 0, 0.8),
+	Vector3.new(-0.8, 0, 0.8),
+	Vector3.new(0.8, 0, -0.8),
+	Vector3.new(-0.8, 0, -0.8),
+}
+
+local function groundSample(): (boolean, number, Vector3)
 	if not chassis then
-		return nil
+		return false, 0, Vector3.yAxis
 	end
 	rayParams.FilterDescendantsInstances = { chassis.Parent :: Instance, player.Character :: Instance? }
-	return workspace:Raycast(chassis.Position, Vector3.new(0, -(Tuning.GroundRayLength + Tuning.KartSize.Y / 2), 0), rayParams)
+	local halfY = Tuning.KartSize.Y / 2
+	local rayLen = halfY + Tuning.RideHeight + Tuning.GroundRayMargin
+	local hits = 0
+	local sumY = 0
+	local sumNormal = Vector3.zero
+	for _, off in CORNER_OFFSETS do
+		local origin = chassis.CFrame
+			* CFrame.new(off.X * Tuning.KartSize.X / 2, 0, off.Z * Tuning.KartSize.Z / 2)
+		local result = workspace:Raycast(origin.Position, Vector3.new(0, -rayLen, 0), rayParams)
+		if result then
+			hits += 1
+			sumY += result.Position.Y
+			sumNormal += result.Normal
+		end
+	end
+	if hits < 2 then
+		return false, 0, Vector3.yAxis
+	end
+	return true, sumY / hits, sumNormal.Unit
 end
 
 local function updateLastNode()
@@ -260,8 +287,7 @@ RunService.Heartbeat:Connect(function(dt)
 		return
 	end
 
-	local ground = groundCast()
-	local grounded = ground ~= nil
+	local grounded, groundY, groundNormal = groundSample()
 
 	-- heading
 	local steerRate = math.rad(Tuning.SteerRateDeg)
@@ -279,10 +305,13 @@ RunService.Heartbeat:Connect(function(dt)
 
 	-- speed model
 	if grounded then
-		local normal = ground.Normal
+		local normal = groundNormal
 		-- forward projected onto the slope plane
 		local fwdOnSlope = (headingDir - normal * headingDir:Dot(normal)).Unit
 		local slopeAccel = -fwdOnSlope.Y * workspace.Gravity * Tuning.SlopeAccelFactor / 9.81 -- normalized feel factor
+		if slopeAccel < 0 then
+			slopeAccel *= Tuning.UphillDecelFactor -- arcade momentum: ramps don't kill speed
+		end
 		speed += (slopeAccel + Tuning.FlowAssist) * dt
 		speed -= Tuning.Drag * speed * dt
 
@@ -296,9 +325,13 @@ RunService.Heartbeat:Connect(function(dt)
 			velDir = velDir.Unit
 		end
 
+		-- hover servo: float at ride height above the averaged ground (docs/11)
+		local targetY = groundY + Tuning.RideHeight + Tuning.KartSize.Y / 2
+		local hoverVel = math.clamp((targetY - chassis.Position.Y) * Tuning.HoverGain, -Tuning.HoverMaxVel, Tuning.HoverMaxVel)
+
 		mover.MaxForce = math.huge
 		mover.VelocityConstraintMode = Enum.VelocityConstraintMode.Vector
-		mover.VectorVelocity = velDir * speed - normal * Tuning.StickForce
+		mover.VectorVelocity = velDir * speed + Vector3.new(0, hoverVel, 0)
 
 		-- orient to heading + slope
 		local right = headingDir:Cross(Vector3.yAxis).Unit
