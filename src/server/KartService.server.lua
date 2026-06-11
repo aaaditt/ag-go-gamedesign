@@ -15,6 +15,10 @@ local respawnRemote = Instance.new("RemoteEvent")
 respawnRemote.Name = "RequestRespawn"
 respawnRemote.Parent = remotes
 
+local launchRemote = Instance.new("RemoteEvent")
+launchRemote.Name = "RequestLaunch"
+launchRemote.Parent = remotes
+
 local function getSpawnCFrame(): CFrame
 	local track = workspace:WaitForChild("Track")
 	local pad = track:WaitForChild("StartPad")
@@ -133,12 +137,7 @@ local function spawnKartFor(player: Player, character: Model)
 	local seat = kart:FindFirstChildOfClass("Seat") :: Seat
 	task.wait(0.2) -- let physics settle before seating
 	seat:Sit(humanoid)
-
-	for _, part in kart:GetDescendants() do
-		if part:IsA("BasePart") then
-			part:SetNetworkOwner(player)
-		end
-	end
+	-- NOTE: network ownership is granted at launch — SetNetworkOwner errors on anchored parts
 end
 
 local function hookPlayer(player: Player)
@@ -161,6 +160,21 @@ Players.PlayerRemoving:Connect(function(player)
 	if kart then
 		kart:Destroy()
 		kartsByPlayer[player] = nil
+	end
+end)
+
+-- Launch: only the server may unanchor; then physics ownership goes to the rider.
+launchRemote.OnServerEvent:Connect(function(player)
+	local kart = kartsByPlayer[player]
+	local chassis = kart and kart.PrimaryPart
+	if not chassis then
+		return
+	end
+	chassis.Anchored = false
+	for _, part in (kart :: Model):GetDescendants() do
+		if part:IsA("BasePart") and not part.Anchored then
+			part:SetNetworkOwner(player)
+		end
 	end
 end)
 

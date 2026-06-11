@@ -15,6 +15,7 @@ local Tuning = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Tu
 
 local player = Players.LocalPlayer
 local respawnRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RequestRespawn") :: RemoteEvent
+local launchRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RequestLaunch") :: RemoteEvent
 
 -- ============ state ============
 local chassis: Part? = nil
@@ -185,9 +186,7 @@ UserInputService.InputEnded:Connect(function(input)
 		task.delay(1.5, function()
 			hint.Visible = false
 		end)
-		if chassis then
-			chassis.Anchored = false
-		end
+		launchRemote:FireServer() -- server unanchors + grants us physics ownership
 		if mover then
 			mover.MaxForce = math.huge
 		end

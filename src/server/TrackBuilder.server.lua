@@ -43,8 +43,8 @@ local function dropNode(cf: CFrame)
 	nodeIndex += 1
 	local node = Instance.new("Attachment")
 	node.Name = string.format("Node%03d", nodeIndex)
+	node.Parent = nodeAnchor -- parent FIRST: WorldCFrame needs a parent to resolve against
 	node.WorldCFrame = cf * CFrame.new(0, 4, 0)
-	node.Parent = nodeAnchor
 end
 
 -- Track is authored as a segment list; cursor CFrame chains them together.
@@ -80,8 +80,8 @@ makePart(Vector3.new(2, 14, 2), forkCF * CFrame.new(8, 8, 0), Color3.fromRGB(110
 
 local kartSpawn = Instance.new("Attachment")
 kartSpawn.Name = "KartSpawn"
-kartSpawn.WorldCFrame = START_CF * CFrame.new(0, 4, -5)
 kartSpawn.Parent = pad
+kartSpawn.WorldCFrame = START_CF * CFrame.new(0, 4, -5)
 dropNode(START_CF * CFrame.new(0, 0, -5))
 
 -- Avatar spawns on the pad (not at world origin) before being seated in the kart
