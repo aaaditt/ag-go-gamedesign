@@ -102,6 +102,54 @@ hint.TextStrokeTransparency = 0.4
 hint.Text = "HOLD SPACE to charge the sling — release in the GREEN"
 hint.Parent = gui
 
+-- ============ respawn/reset ============
+local respawning = false
+
+local function syncHeadingFromChassis()
+	if not chassis then
+		return
+	end
+	local look = chassis.CFrame.LookVector
+	heading = math.atan2(-look.X, -look.Z)
+	velDir = Vector3.new(look.X, 0, look.Z).Unit
+end
+
+local function resetToStart()
+	respawnRemote:FireServer(1)
+	launched, charging, charge, speed = false, false, 0, 0
+	drifting, driftTime, boostTimer = false, 0, 0
+	lastNodeIdx = 1
+	chargeFill.Size = UDim2.new(0, 0, 1, 0)
+	chargeBack.Visible = true
+	hint.Text = "HOLD SPACE to charge the sling — release in the GREEN"
+	hint.Visible = true
+	if mover then
+		mover.MaxForce = 0
+		mover.VectorVelocity = Vector3.zero
+	end
+	if aligner then
+		aligner.MaxTorque = 0
+	end
+	task.delay(0.2, syncHeadingFromChassis)
+end
+
+local function fallRespawn()
+	if respawning then
+		return
+	end
+	respawning = true
+	if lastNodeIdx <= 1 then
+		resetToStart()
+	else
+		respawnRemote:FireServer(lastNodeIdx)
+		speed *= Tuning.RespawnSpeedFraction
+		task.delay(0.2, syncHeadingFromChassis)
+	end
+	task.delay(1.5, function()
+		respawning = false
+	end)
+end
+
 -- ============ input ============
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then
@@ -115,12 +163,7 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	elseif input.KeyCode == Enum.KeyCode.LeftShift then
 		drifting = true
 	elseif input.KeyCode == Enum.KeyCode.R then
-		respawnRemote:FireServer(lastNodeIdx)
-		launched = false
-		charging = false
-		speed = 0
-		hint.Visible = true
-		chargeBack.Visible = true
+		resetToStart()
 	end
 end)
 
@@ -284,7 +327,6 @@ RunService.Heartbeat:Connect(function(dt)
 
 	-- fall respawn
 	if chassis.Position.Y < Tuning.FallY then
-		respawnRemote:FireServer(lastNodeIdx)
-		speed *= Tuning.RespawnSpeedFraction
+		fallRespawn()
 	end
 end)

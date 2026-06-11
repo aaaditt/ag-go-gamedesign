@@ -72,6 +72,16 @@ local function buildKart(player: Player): Model
 	seatWeld.Part1 = seat
 	seatWeld.Parent = chassis
 
+	-- Lock the rider in: Space is the slingshot key, NOT "jump out of the kart"
+	seat:GetPropertyChangedSignal("Occupant"):Connect(function()
+		local occupant = seat.Occupant
+		if occupant then
+			occupant.JumpPower = 0
+			occupant.UseJumpPower = true
+			occupant:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
+		end
+	end)
+
 	-- movers the client drives (forces start zeroed)
 	local att = Instance.new("Attachment")
 	att.Name = "RootAttachment"
