@@ -165,6 +165,6 @@ respawnRemote.OnServerEvent:Connect(function(player, nodeIdx)
 	local seat = kart and kart:FindFirstChildOfClass("Seat")
 	if humanoid and seat and humanoid.SeatPart ~= seat then
 		task.wait(0.1)
-		(seat :: Seat):Sit(humanoid)
+		seat:Sit(humanoid)
 	end
 end)
