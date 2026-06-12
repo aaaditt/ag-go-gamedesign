@@ -11,6 +11,7 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local Tuning = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Tuning"))
+local Bus = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ClientBus"))
 
 local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -69,6 +70,7 @@ workspace.ChildAdded:Connect(function(child)
 		findKart()
 	end
 end)
+
 
 -- ============ HUD (greybox) ============
 local gui = Instance.new("ScreenGui")
@@ -152,6 +154,7 @@ local function resetToStart()
 		aligner.MaxTorque = 0
 	end
 	task.delay(0.2, syncHeadingFromChassis)
+	Bus.fire("reset")
 end
 
 local function fallRespawn()
@@ -170,6 +173,8 @@ local function fallRespawn()
 		respawning = false
 	end)
 end
+
+Bus.on("forceReset", resetToStart)
 
 -- ============ drift helpers ============
 local function currentDriftStage(): number
@@ -244,6 +249,7 @@ UserInputService.InputEnded:Connect(function(input)
 		if aligner then
 			aligner.MaxTorque = math.huge
 		end
+		Bus.fire("launch")
 	elseif input.KeyCode == Enum.KeyCode.LeftShift then
 		releaseDrift()
 	end
