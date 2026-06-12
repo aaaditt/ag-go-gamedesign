@@ -63,13 +63,18 @@ The stepwise plan to build everything in docs 01–12, from the current prototyp
 - [x] W5.7 DataStore persistence with BindToClose
 - [→] W5.8 Daily quests + login streak — M7 live-ops cluster
 
-## M6 — Tracks, episodes & navigation UI
+## M6 — Tracks, episodes & navigation UI ✅ (validation pass pending playtest)
 
-- [ ] W6.1 Track generator presets: 3 episodes × 3 tracks (segment lists + theming params)
-- [ ] W6.2 Episode theming kits (grassland / canyon / ice; colors, materials, props, ice surface physics)
-- [ ] W6.3 Episode Map UI → Challenge List UI → Pre-Race flow (docs/08 S4–S6)
-- [ ] W6.4 Boss assignments per track; roster recruitment chain wired to episode unlocks
-- [ ] W6.5 Track validation pass (all challenges completable at min CC; star calibration)
+- [x] W6.1 Track generator presets: 3 episodes × 3 tracks
+- [x] W6.2 Episode theming (grassland / canyon / ice + ice grip physics; prop dressing → M8)
+- [x] W6.3 Episode Map UI → per-track Challenge List → launch flow
+- [x] W6.4 Bosses per track (9 = full roster); episode unlocks via recruitment
+- [ ] W6.5 Track validation pass — **requires in-Studio playtesting (user gate)**
+
+## ⛔ VERIFICATION GATE — everything above must be playtested before M7/M8 continue
+M0–M6 + leaderboards are code-complete but unverified in Studio. Per execution
+rule 3, multiplayer (M7) and polish (M8) must not stack on an untested core.
+Next session: run the test protocol, fix what breaks, then resume M7.
 
 ## M7 — Hub, multiplayer & competition
 
