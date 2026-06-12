@@ -129,8 +129,13 @@ local function poseBot(bot: Bot)
 	local d = math.max(bot.dist, 0)
 	local pos = l:PosAt(d)
 	local tangent = l:TangentAt(d)
-	local right = tangent:Cross(Vector3.yAxis).Unit
-	local cf = CFrame.lookAt(pos + right * bot.lateral + Vector3.new(0, 1, 0), pos + right * bot.lateral + tangent * 10)
+	-- guard: tangent can go vertical inside loops/corkscrews
+	local right = tangent:Cross(Vector3.yAxis)
+	right = right.Magnitude > 0.05 and right.Unit or Vector3.xAxis
+	local up = right:Cross(tangent)
+	up = up.Magnitude > 0.05 and up.Unit or Vector3.yAxis
+	local offsetPos = pos + right * bot.lateral + up
+	local cf = CFrame.lookAt(offsetPos, offsetPos + tangent * 10, up)
 	bot.model:PivotTo(cf)
 	local nose = bot.model:FindFirstChildOfClass("WedgePart")
 	if nose then

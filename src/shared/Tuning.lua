@@ -44,11 +44,12 @@ return {
 	AirControlDeg = 25,
 	LevelOutRate = 2.5,
 
-	-- Hover suspension (docs/11)
+	-- Hover suspension (docs/11; surface-relative since the Wild Geometry update)
 	RideHeight = 2.5,
 	HoverGain = 10,
 	HoverMaxVel = 60,
 	GroundRayMargin = 4,
+	InvertMinSpeed = 32, -- slower than this on walls/ceiling (normal.Y < 0.15) = you fall off
 
 	-- Body & camera
 	KartSize = Vector3.new(6, 2, 9),

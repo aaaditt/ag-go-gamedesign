@@ -76,6 +76,14 @@ M0–M6 + leaderboards are code-complete but unverified in Studio. Per execution
 rule 3, multiplayer (M7) and polish (M8) must not stack on an untested core.
 Next session: run the test protocol, fix what breaks, then resume M7.
 
+## M6.5 — Wild track geometry (feel-tester directive: "100× crazier") ✅
+
+- [x] W6.5a Surface-relative driving: hover rays follow kart-local down; steering rotates around the surface normal → loops/walls/inverted road drivable; InvertMinSpeed peel-off rule
+- [x] W6.5b TrackGen `loop` segments (radius param, inclined exit offset, no respawn nodes on inverted arc)
+- [x] W6.5c Helix/spiral authoring (360–540° descending corkscrews)
+- [x] W6.5d Tracks re-authored: loops from e1t3 on, double loop on Mesa Madness, e3t3 "Avalanche Apocalypse" = dive+loop+spiral+gaps+loop
+- [x] W6.5e Bot pose guards on vertical/inverted spline tangents
+
 ## M7 — Hub, multiplayer & competition
 
 - [ ] W7.1 Hub plaza (spawn, race gates, garage door, kiosks; walkable avatar mode ↔ kart mode)

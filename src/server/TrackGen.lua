@@ -98,6 +98,32 @@ function TrackGen.Build(def: TracksConfig.TrackDef): Folder
 	end
 
 	for segIdx, segDef in def.segments do
+		-- ============ vertical LOOP segments (Wild Geometry update) ============
+		if segDef.loop then
+			local radius = segDef.radius or 26
+			local steps = 26
+			local anglePer = 360 / steps
+			local stepLen = 2 * math.pi * radius / steps
+			for _ = 1, steps do
+				currentPitch += anglePer
+				cursor = cursor * CFrame.Angles(0, math.rad(0.7), 0) -- inclined loop: exit offsets sideways
+				local stepped = cursor * CFrame.Angles(math.rad(currentPitch), 0, 0)
+				local mid = stepped * CFrame.new(0, 0, -stepLen / 2)
+				placeStep(mid, segIdx)
+				cursor = stepped * CFrame.new(0, 0, -stepLen) * CFrame.Angles(math.rad(-currentPitch), 0, 0)
+					* CFrame.Angles(0, math.rad(0.7), 0)
+				sinceNode += stepLen
+				-- respawn nodes only on the right-side-up part of the loop
+				local p = currentPitch % 360
+				if sinceNode >= NODE_EVERY and (p < 50 or p > 310) then
+					dropNode(cursor)
+					sinceNode = 0
+				end
+			end
+			currentPitch -= 360 -- full circle: back where we started, pitch-wise
+			continue
+		end
+
 		local steps = math.max(1, math.ceil(segDef.length / STEP))
 		if math.abs(segDef.yawDeg) / steps > MAX_YAW_PER_STEP then
 			steps = math.ceil(math.abs(segDef.yawDeg) / MAX_YAW_PER_STEP)

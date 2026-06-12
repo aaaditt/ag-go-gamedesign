@@ -293,6 +293,9 @@ local CORNER_OFFSETS = {
 	Vector3.new(-0.8, 0, -0.8),
 }
 
+-- Surface-relative sampling (Wild Geometry update): rays follow the KART'S
+-- down, not world down — so loops, walls, and inverted road all register.
+-- Returns grounded, average hit DISTANCE along the ray, normal, pad, ice.
 local function groundSample(): (boolean, number, Vector3, boolean, boolean)
 	if not chassis then
 		return false, 0, Vector3.yAxis, false, false
@@ -300,16 +303,16 @@ local function groundSample(): (boolean, number, Vector3, boolean, boolean)
 	rayParams.FilterDescendantsInstances = { chassis.Parent :: Instance, player.Character :: Instance? }
 	local halfY = Tuning.KartSize.Y / 2
 	local rayLen = halfY + Tuning.RideHeight + Tuning.GroundRayMargin
-	local hits, sumY, sumNormal = 0, 0, Vector3.zero
+	local down = -chassis.CFrame.UpVector
+	local hits, sumDist, sumNormal = 0, 0, Vector3.zero
 	local onBoostPad = false
 	local onIce = false
 	for _, off in CORNER_OFFSETS do
-		local origin = chassis.CFrame
-			* CFrame.new(off.X * Tuning.KartSize.X / 2, 0, off.Z * Tuning.KartSize.Z / 2)
-		local result = workspace:Raycast(origin.Position, Vector3.new(0, -rayLen, 0), rayParams)
+		local origin = (chassis.CFrame * CFrame.new(off.X * Tuning.KartSize.X / 2, 0, off.Z * Tuning.KartSize.Z / 2)).Position
+		local result = workspace:Raycast(origin, down * rayLen, rayParams)
 		if result then
 			hits += 1
-			sumY += result.Position.Y
+			sumDist += (result.Position - origin).Magnitude
 			sumNormal += result.Normal
 			if result.Instance.Name == "BoostPad" then
 				onBoostPad = true
@@ -322,7 +325,7 @@ local function groundSample(): (boolean, number, Vector3, boolean, boolean)
 	if hits < 2 then
 		return false, 0, Vector3.yAxis, false, false
 	end
-	return true, sumY / hits, sumNormal.Unit, onBoostPad, onIce
+	return true, sumDist / hits, sumNormal.Unit, onBoostPad, onIce
 end
 
 local function updateLastNode()
@@ -371,7 +374,12 @@ RunService.Heartbeat:Connect(function(dt)
 		return
 	end
 
-	local grounded, groundY, groundNormal, onBoostPad, onIce = groundSample()
+	local grounded, groundDist, groundNormal, onBoostPad, onIce = groundSample()
+
+	-- inverted-stick rule: too slow on a wall/ceiling = peel off and fall
+	if grounded and groundNormal.Y < 0.15 and speed < Tuning.InvertMinSpeed then
+		grounded = false
+	end
 
 	-- boost pad pickup
 	if onBoostPad then
@@ -410,7 +418,9 @@ RunService.Heartbeat:Connect(function(dt)
 			steerRate *= Tuning.GlideAirSteerMult
 		end
 	end
-	heading -= steerInput * steerRate * dt
+	if not grounded then
+		heading -= steerInput * steerRate * dt
+	end
 	local headingDir = Vector3.new(-math.sin(heading), 0, -math.cos(heading))
 
 	-- kart stats from the equipped loadout (server-published attributes)
@@ -420,7 +430,23 @@ RunService.Heartbeat:Connect(function(dt)
 
 	if grounded then
 		local normal = groundNormal
-		local fwdOnSlope = (headingDir - normal * headingDir:Dot(normal)).Unit
+		-- Wild Geometry: forward lives ON the surface — project travel
+		-- direction onto the surface plane and steer by rotating around the
+		-- surface NORMAL. This is what lets karts drive loops and ceilings.
+		local fwdOnSlope = velDir - normal * velDir:Dot(normal)
+		if fwdOnSlope.Magnitude < 0.05 then
+			local look = chassis.CFrame.LookVector
+			fwdOnSlope = look - normal * look:Dot(normal)
+		end
+		fwdOnSlope = fwdOnSlope.Unit
+		if steerInput ~= 0 then
+			fwdOnSlope = CFrame.fromAxisAngle(normal, -steerInput * steerRate * dt):VectorToWorldSpace(fwdOnSlope)
+		end
+		-- keep world heading synced so leaving the ground feels continuous
+		local flatFwd = Vector3.new(fwdOnSlope.X, 0, fwdOnSlope.Z)
+		if flatFwd.Magnitude > 0.05 then
+			heading = math.atan2(-flatFwd.X, -flatFwd.Z)
+		end
 
 		-- slope force: steeper = stronger (∝ sin); uphill costs at UphillDecelFactor
 		local slopeAccel = -fwdOnSlope.Y * workspace.Gravity * Tuning.SlopeAccelFactor / 9.81
@@ -471,17 +497,17 @@ RunService.Heartbeat:Connect(function(dt)
 			velDir = velDir.Unit
 		end
 
-		-- hover servo
-		local targetY = groundY + Tuning.RideHeight + Tuning.KartSize.Y / 2
+		-- hover servo along the SURFACE NORMAL (works upside down): hold the
+		-- ride distance measured along the kart's own down-ray
+		local targetDist = Tuning.RideHeight + Tuning.KartSize.Y / 2
 		local hoverVel =
-			math.clamp((targetY - chassis.Position.Y) * Tuning.HoverGain, -Tuning.HoverMaxVel, Tuning.HoverMaxVel)
+			math.clamp((targetDist - groundDist) * Tuning.HoverGain, -Tuning.HoverMaxVel, Tuning.HoverMaxVel)
 
 		mover.MaxForce = math.huge
 		mover.VelocityConstraintMode = Enum.VelocityConstraintMode.Vector
-		mover.VectorVelocity = velDir * speed + Vector3.new(0, hoverVel, 0)
+		mover.VectorVelocity = velDir * speed + normal * hoverVel
 
-		local right = headingDir:Cross(Vector3.yAxis).Unit
-		aligner.CFrame = CFrame.fromMatrix(Vector3.zero, right, normal, -fwdOnSlope)
+		aligner.CFrame = CFrame.lookAt(Vector3.zero, fwdOnSlope, normal)
 	else
 		-- airborne
 		if drifting then
@@ -489,6 +515,7 @@ RunService.Heartbeat:Connect(function(dt)
 		end
 		local gliding = UserInputService:IsKeyDown(Enum.KeyCode.Space)
 		local flat = Vector3.new(headingDir.X, 0, headingDir.Z).Unit * speed
+		velDir = Vector3.new(headingDir.X, 0, headingDir.Z).Unit -- landings re-project from this
 		mover.MaxForce = math.huge
 		if gliding then
 			-- glide: integrate gravity manually, but never fall faster than glide speed

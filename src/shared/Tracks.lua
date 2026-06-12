@@ -9,6 +9,8 @@ export type Segment = {
 	yawDeg: number,
 	gap: boolean?,
 	boostPad: boolean?,
+	loop: boolean?, -- full vertical loop (length ignored; uses radius)
+	radius: number?,
 }
 
 export type Theme = {
@@ -51,13 +53,19 @@ local ICE: Theme = {
 	ice = true,
 }
 
-local function seg(length: number, pitchDeg: number, yawDeg: number, opts: { gap: boolean?, boostPad: boolean? }?): Segment
+local function seg(length: number, pitchDeg: number, yawDeg: number, opts: { gap: boolean?, boostPad: boolean?, loop: boolean?, radius: number? }?): Segment
 	local s: Segment = { length = length, pitchDeg = pitchDeg, yawDeg = yawDeg }
 	if opts then
 		s.gap = opts.gap
 		s.boostPad = opts.boostPad
+		s.loop = opts.loop
+		s.radius = opts.radius
 	end
 	return s
+end
+
+local function loop(radius: number): Segment
+	return seg(0, 0, 0, { loop = true, radius = radius })
 end
 
 local Tracks: { TrackDef } = {
@@ -71,18 +79,21 @@ local Tracks: { TrackDef } = {
 		},
 	},
 	{
-		id = "e1t2", name = "Meadow Run", episode = 1, order = 2, theme = GRASS, bossId = "blues", rivalCruise = 90, timeLimit = 70,
+		id = "e1t2", name = "Meadow Spiral", episode = 1, order = 2, theme = GRASS, bossId = "blues", rivalCruise = 90, timeLimit = 75,
 		segments = {
-			seg(60, -8, 0), seg(70, -6, 40), seg(70, -6, -40), seg(70, -6, 40), seg(50, -14, 0, { boostPad = true }),
-			seg(60, -4, -60), seg(50, -10, 0), seg(80, -7, 30), seg(70, -5, -30), seg(60, -2, 0),
+			seg(60, -10, 0), seg(70, -8, 40), seg(50, -18, 0, { boostPad = true }),
+			seg(200, -7, 360, { boostPad = true }), -- full descending corkscrew spiral
+			seg(60, -4, -60), seg(50, -14, 0), seg(80, -8, 30), seg(70, -6, -30), seg(60, -2, 0),
 		},
 	},
 	{
-		id = "e1t3", name = "Treetop Dive", episode = 1, order = 3, theme = GRASS, bossId = "bomb", rivalCruise = 92, timeLimit = 80,
+		id = "e1t3", name = "Loop-de-Grove", episode = 1, order = 3, theme = GRASS, bossId = "bomb", rivalCruise = 92, timeLimit = 85,
 		segments = {
-			seg(40, -4, 0), seg(60, -18, 0), seg(50, -6, 45), seg(30, 12, 0, { boostPad = true }), seg(30, 0, 0, { gap = true }),
-			seg(60, -16, 0), seg(70, -8, -50), seg(40, -2, 0, { boostPad = true }), seg(30, 12, 0), seg(34, 0, 0, { gap = true }),
-			seg(60, -14, -20), seg(80, -6, 20), seg(60, -2, 0),
+			seg(40, -6, 0), seg(70, -20, 0, { boostPad = true }),
+			loop(24), -- first vertical loop of the game
+			seg(50, -8, 45), seg(30, 12, 0, { boostPad = true }), seg(32, 0, 0, { gap = true }),
+			seg(60, -18, 0), seg(70, -10, -50), seg(40, -2, 0, { boostPad = true }), seg(30, 13, 0), seg(36, 0, 0, { gap = true }),
+			seg(60, -16, -20), seg(80, -6, 20), seg(60, -2, 0),
 		},
 	},
 	-- ============ Episode 2: Oink Canyon (desert) ============
@@ -94,43 +105,51 @@ local Tracks: { TrackDef } = {
 		},
 	},
 	{
-		id = "e2t2", name = "Hog Hoodoos", episode = 2, order = 2, theme = CANYON, bossId = "hal", rivalCruise = 98, timeLimit = 85,
+		id = "e2t2", name = "Hoodoo Helix", episode = 2, order = 2, theme = CANYON, bossId = "hal", rivalCruise = 98, timeLimit = 95,
 		segments = {
-			seg(60, -9, 0), seg(50, -5, 70), seg(50, -12, 0, { boostPad = true }), seg(50, -5, -70), seg(60, -10, 0),
-			seg(50, -5, 70), seg(50, -14, 0), seg(40, -2, 0, { boostPad = true }), seg(32, 15, 0), seg(42, 0, 0, { gap = true }),
-			seg(70, -13, -25), seg(80, -5, 0),
+			seg(60, -11, 0), seg(50, -6, 70), seg(50, -16, 0, { boostPad = true }),
+			seg(280, -6, 540, { boostPad = true }), -- 1.5-turn corkscrew down the hoodoo
+			seg(50, -14, 0), seg(40, -2, 0, { boostPad = true }), seg(34, 15, 0), seg(44, 0, 0, { gap = true }),
+			seg(70, -16, -25), seg(80, -5, 0),
 		},
 	},
 	{
-		id = "e2t3", name = "Mesa Plunge", episode = 2, order = 3, theme = CANYON, bossId = "stella", rivalCruise = 100, timeLimit = 90,
+		id = "e2t3", name = "Mesa Madness", episode = 2, order = 3, theme = CANYON, bossId = "stella", rivalCruise = 100, timeLimit = 100,
 		segments = {
-			seg(40, -3, 0), seg(70, -20, 0), seg(60, -4, -45), seg(70, -18, 0, { boostPad = true }), seg(60, -4, 45),
-			seg(35, 14, 0, { boostPad = true }), seg(46, 0, 0, { gap = true }), seg(70, -16, 0), seg(60, -6, -60),
-			seg(60, -6, 60), seg(70, -3, 0),
+			seg(40, -5, 0), seg(70, -24, 0, { boostPad = true }),
+			loop(26), seg(40, -10, 0, { boostPad = true }), loop(26), -- double loop!
+			seg(60, -6, -45), seg(70, -20, 0, { boostPad = true }), seg(60, -6, 45),
+			seg(36, 15, 0, { boostPad = true }), seg(48, 0, 0, { gap = true }), seg(70, -18, 0), seg(60, -8, -60),
+			seg(60, -8, 60), seg(70, -3, 0),
 		},
 	},
 	-- ============ Episode 3: Frostfall (ice) ============
 	{
-		id = "e3t1", name = "Powder Pass", episode = 3, order = 1, theme = ICE, bossId = "terence", rivalCruise = 102, timeLimit = 85,
+		id = "e3t1", name = "Powder Corkscrew", episode = 3, order = 1, theme = ICE, bossId = "terence", rivalCruise = 102, timeLimit = 95,
 		segments = {
-			seg(50, -6, 0), seg(70, -10, 35), seg(70, -10, -35), seg(50, -3, 0, { boostPad = true }), seg(70, -12, 45),
-			seg(70, -12, -45), seg(50, -8, 0), seg(60, -4, 55), seg(70, -7, 0), seg(60, -2, 0),
+			seg(50, -8, 0), seg(70, -14, 35), seg(50, -3, 0, { boostPad = true }),
+			seg(220, -8, 450, { boostPad = true }), -- icy 1.25-turn corkscrew
+			seg(70, -14, -45), seg(50, -10, 0), loop(24), seg(60, -6, 55), seg(70, -8, 0), seg(60, -2, 0),
 		},
 	},
 	{
-		id = "e3t2", name = "Glacier Gap", episode = 3, order = 2, theme = ICE, bossId = "bubbles", rivalCruise = 105, timeLimit = 90,
+		id = "e3t2", name = "Glacier Gap", episode = 3, order = 2, theme = ICE, bossId = "bubbles", rivalCruise = 105, timeLimit = 100,
 		segments = {
-			seg(50, -8, 0), seg(60, -14, 0, { boostPad = true }), seg(34, 13, 0), seg(44, 0, 0, { gap = true }),
-			seg(60, -12, -40), seg(60, -5, 0), seg(34, 13, 0, { boostPad = true }), seg(48, 0, 0, { gap = true }),
-			seg(70, -15, 30), seg(70, -6, -30), seg(70, -3, 0),
+			seg(50, -10, 0), seg(60, -18, 0, { boostPad = true }), seg(34, 13, 0), seg(46, 0, 0, { gap = true }),
+			seg(60, -14, -40), loop(28),
+			seg(60, -6, 0), seg(34, 14, 0, { boostPad = true }), seg(52, 0, 0, { gap = true }),
+			seg(70, -18, 30), seg(70, -8, -30), seg(70, -3, 0),
 		},
 	},
 	{
-		id = "e3t3", name = "Avalanche Alley", episode = 3, order = 3, theme = ICE, bossId = "foreman", rivalCruise = 108, timeLimit = 95,
+		id = "e3t3", name = "Avalanche Apocalypse", episode = 3, order = 3, theme = ICE, bossId = "foreman", rivalCruise = 108, timeLimit = 110,
 		segments = {
-			seg(40, -5, 0), seg(80, -19, 0, { boostPad = true }), seg(60, -6, -55), seg(60, -6, 55), seg(50, -13, 0),
-			seg(36, 15, 0, { boostPad = true }), seg(50, 0, 0, { gap = true }), seg(60, -10, -45), seg(50, -3, 0),
-			seg(34, 14, 0), seg(44, 0, 0, { gap = true }), seg(80, -16, 25), seg(90, -4, 0),
+			seg(40, -8, 0), seg(80, -26, 0, { boostPad = true }), -- monster dive
+			loop(30),
+			seg(60, -8, -55), seg(180, -9, 360, { boostPad = true }), -- spiral
+			seg(50, -16, 0), seg(38, 16, 0, { boostPad = true }), seg(54, 0, 0, { gap = true }),
+			seg(60, -12, -45), loop(22), seg(50, -4, 0),
+			seg(36, 15, 0, { boostPad = true }), seg(48, 0, 0, { gap = true }), seg(80, -20, 25), seg(90, -4, 0),
 		},
 	},
 }
