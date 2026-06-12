@@ -176,6 +176,13 @@ end
 
 Bus.on("forceReset", resetToStart)
 
+-- self powers (boosts) arrive from PowerController via the bus
+Bus.on("powerBoost", function(cap: number, duration: number)
+	boostCap = cap
+	boostTimer = duration
+	speed = math.max(speed, cap * 0.92)
+end)
+
 -- ============ drift helpers ============
 local function currentDriftStage(): number
 	local stage = 0

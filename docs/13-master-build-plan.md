@@ -23,15 +23,15 @@ The stepwise plan to build everything in docs 01–12, from the current prototyp
 - [x] W1.4 Results overlay: time, session best, Retry / Continue
 - [x] W1.5 Race state machine formalized: PreLaunch → Racing → Finished (drives HUD visibility)
 
-## M2 — AI opponents & placement
+## M2 — AI opponents & placement ✅
 
-- [ ] W2.1 Racing-line builder: dense spline sampled from track ribbon (server)
-- [ ] W2.2 Bot kart spawner (server-simulated, same hover physics, simplified)
-- [ ] W2.3 Bot driver: line following with offset + noise, skid on marked corners, 3 difficulty bands
-- [ ] W2.4 Rubber-banding (placement-aware, tunable)
-- [ ] W2.5 Live race positions (spline progress) + position HUD ("3/8")
-- [ ] W2.6 Results with placement + reward hooks
-- [ ] W2.7 Countdown start gate (3-2-1-GO synced with slingshot for all racers)
+- [x] W2.1 Racing-line builder: Catmull-Rom spline from respawn nodes (SplineUtil)
+- [x] W2.2 Bot kart spawner — kinematic line-followers v1 (physical hover bots: parked → M8 polish)
+- [x] W2.3 Bot driver: line following with lateral offsets + difficulty speed spread + downhill bonus
+- [x] W2.4 Rubber-banding (placement-aware, tunable)
+- [x] W2.5 Live race positions (spline progress, player attributes) + position HUD
+- [x] W2.6 Results with placement (reward hooks land with economy in M5)
+- [→] W2.7 Countdown start gate — moved into M4 challenge flow (it belongs to mode start UX)
 
 ## M3 — Characters & powers
 

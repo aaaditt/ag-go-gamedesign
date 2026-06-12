@@ -76,6 +76,8 @@ type Bot = {
 	cruise: number,
 	finished: boolean,
 	place: number?,
+	frozenUntil: number,
+	baseColor: Color3,
 }
 
 local botsFolder = Instance.new("Folder")
@@ -117,6 +119,8 @@ local function makeBot(i: number): Bot
 		cruise = BOT_SPEEDS[i],
 		finished = false,
 		place = nil,
+		frozenUntil = 0,
+		baseColor = BOT_COLORS[i],
 	}
 end
 
@@ -183,6 +187,50 @@ respawnRemote.OnServerEvent:Connect(function(player, nodeIdx)
 	end
 end)
 
+-- ============ power effects on bots (from PowerService) ============
+local ServerStorage = game:GetService("ServerStorage")
+task.spawn(function()
+	local bus = ServerStorage:WaitForChild("BotEffectBus", 30) :: BindableEvent?
+	if not bus then
+		return
+	end
+	bus.Event:Connect(function(fromPlayer: Player, effect: { [string]: any })
+		local prog = playerProgress[fromPlayer]
+		local playerDist = prog and prog.dist or 0
+
+		-- collect candidates by along-track distance from the caster
+		local candidates: { { bot: Bot, gap: number } } = {}
+		for _, bot in bots do
+			if bot.finished then
+				continue
+			end
+			local gap = bot.dist - playerDist
+			if effect.aheadOnly and gap <= 0 then
+				continue
+			end
+			if effect.range and math.abs(gap) > effect.range then
+				continue
+			end
+			table.insert(candidates, { bot = bot, gap = math.abs(gap) })
+		end
+		table.sort(candidates, function(a, b)
+			return a.gap < b.gap
+		end)
+
+		local maxTargets = effect.targets or #candidates
+		for i = 1, math.min(maxTargets, #candidates) do
+			local bot = candidates[i].bot
+			if effect.knockback then
+				bot.dist = math.max(bot.dist - effect.knockback, 0)
+			end
+			if effect.freezeTime then
+				bot.frozenUntil = os.clock() + effect.freezeTime
+			end
+			poseBot(bot)
+		end
+	end)
+end)
+
 -- ============ main loop ============
 local positionTick = 0
 
@@ -208,9 +256,16 @@ RunService.Heartbeat:Connect(function(dt)
 	end
 
 	-- advance bots
+	local now = os.clock()
 	for _, bot in bots do
 		if bot.finished then
 			continue
+		end
+		if now < bot.frozenUntil then
+			bot.chassis.Color = Color3.fromRGB(150, 220, 255)
+			continue
+		elseif bot.chassis.Color ~= bot.baseColor then
+			bot.chassis.Color = bot.baseColor
 		end
 		local gap = leadPlayerDist - bot.dist
 		local rubber = math.clamp(1 + (gap / RUBBERBAND_RANGE) * 0.35, RUBBERBAND_MIN, RUBBERBAND_MAX)
