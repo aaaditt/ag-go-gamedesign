@@ -184,20 +184,37 @@ local function spawnKartFor(player: Player, character: Model)
 	-- NOTE: network ownership is granted at launch — SetNetworkOwner errors on anchored parts
 end
 
-local function hookPlayer(player: Player)
-	player.CharacterAdded:Connect(function(character)
-		spawnKartFor(player, character)
-	end)
-	-- Play Solo race condition: the character often exists before this script runs
-	if player.Character then
-		task.spawn(spawnKartFor, player, player.Character)
+-- Lobby-first flow (docs/14): karts spawn only when LobbyService says so.
+local function despawnKart(player: Player)
+	local kart = kartsByPlayer[player]
+	if kart then
+		kart:Destroy()
+		kartsByPlayer[player] = nil
 	end
 end
 
-Players.PlayerAdded:Connect(hookPlayer)
-for _, player in Players:GetPlayers() do
-	hookPlayer(player)
-end
+task.spawn(function()
+	local spawnBus = ServerStorage:WaitForChild("SpawnKartBus", 60) :: BindableEvent?
+	local despawnBus = ServerStorage:WaitForChild("DespawnKartBus", 60) :: BindableEvent?
+	if spawnBus then
+		spawnBus.Event:Connect(function(player: Player)
+			local character = player.Character
+			if character then
+				spawnKartFor(player, character)
+			end
+		end)
+	end
+	if despawnBus then
+		despawnBus.Event:Connect(despawnKart)
+	end
+end)
+
+-- dying/resetting while in play mode drops the kart (player respawns in lobby)
+Players.PlayerAdded:Connect(function(player)
+	player.CharacterAdded:Connect(function()
+		despawnKart(player)
+	end)
+end)
 
 Players.PlayerRemoving:Connect(function(player)
 	local kart = kartsByPlayer[player]

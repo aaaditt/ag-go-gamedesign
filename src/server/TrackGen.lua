@@ -69,14 +69,7 @@ function TrackGen.Build(def: TracksConfig.TrackDef): Folder
 	kartSpawn.WorldCFrame = START_CF * CFrame.new(0, 4, -5)
 	dropNode(START_CF * CFrame.new(0, 0, -5))
 
-	local spawnLoc = Instance.new("SpawnLocation")
-	spawnLoc.Size = Vector3.new(8, 1, 8)
-	spawnLoc.CFrame = START_CF * CFrame.new(0, 2, 12)
-	spawnLoc.Anchored = true
-	spawnLoc.Neutral = true
-	spawnLoc.Transparency = 1
-	spawnLoc.Duration = 0
-	spawnLoc.Parent = trackFolder
+	-- (no SpawnLocation here — players spawn in the Lobby, docs/14)
 
 	-- ribbon walk
 	local cursor = START_CF * CFrame.new(0, 0, -20)

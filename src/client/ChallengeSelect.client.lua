@@ -21,6 +21,7 @@ panel.Size = UDim2.new(0.16, 0, 0.56, 0)
 panel.Position = UDim2.new(0.02, 0, 0.18, 0)
 panel.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
 panel.BackgroundTransparency = 0.2
+panel.Visible = false -- shown when entering play mode (docs/14)
 panel.Parent = gui
 local corner = Instance.new("UICorner")
 corner.CornerRadius = UDim.new(0, 10)
@@ -114,9 +115,17 @@ player:GetAttributeChangedSignal("CC"):Connect(function()
 	end
 end)
 
+local inPlayMode = false
+Bus.on("playMode", function(active: boolean)
+	inPlayMode = active
+	panel.Visible = active
+	if active then
+		rebuild()
+	end
+end)
 Bus.on("launch", function()
 	panel.Visible = false
 end)
 Bus.on("reset", function()
-	panel.Visible = true
+	panel.Visible = inPlayMode
 end)

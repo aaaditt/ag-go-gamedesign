@@ -63,12 +63,22 @@ local function findKart()
 	launched, charging, charge, speed = false, false, 0, 0
 	boostTimer, driftTime, driftStage, lastNodeIdx = 0, 0, 0, 1
 	syncHeadingFromChassis()
+	chargeBack.Visible = true
+	chargeFill.Size = UDim2.new(0, 0, 1, 0)
+	hint.Text = "HOLD SPACE to charge the sling — release in the GREEN"
+	hint.Visible = true
 end
 task.spawn(findKart)
 workspace.ChildAdded:Connect(function(child)
 	if child.Name == player.Name .. "_Kart" then
 		task.wait(0.1)
 		findKart()
+	end
+end)
+workspace.ChildRemoved:Connect(function(child)
+	if child.Name == player.Name .. "_Kart" then
+		chassis, mover, aligner = nil, nil, nil
+		launched, charging = false, false
 	end
 end)
 
@@ -83,6 +93,7 @@ local chargeBack = Instance.new("Frame")
 chargeBack.Size = UDim2.new(0.3, 0, 0.03, 0)
 chargeBack.Position = UDim2.new(0.35, 0, 0.85, 0)
 chargeBack.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+chargeBack.Visible = false -- shown when a kart spawns (play mode)
 chargeBack.Parent = gui
 
 local sweetZone = Instance.new("Frame")
@@ -124,6 +135,7 @@ hint.TextScaled = true
 hint.TextColor3 = Color3.new(1, 1, 1)
 hint.TextStrokeTransparency = 0.4
 hint.Text = "HOLD SPACE to charge the sling — release in the GREEN"
+hint.Visible = false
 hint.Parent = gui
 
 local DRIFT_COLORS = {

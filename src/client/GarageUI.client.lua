@@ -208,3 +208,7 @@ end)
 Bus.on("reset", function()
 	toggle.Visible = true
 end)
+Bus.on("openGarage", function()
+	panel.Visible = true
+	refresh()
+end)

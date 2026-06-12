@@ -120,3 +120,7 @@ end)
 Bus.on("reset", function()
 	toggle.Visible = true
 end)
+Bus.on("openMap", function()
+	panel.Visible = true
+	rebuild()
+end)
