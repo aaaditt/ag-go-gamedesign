@@ -37,6 +37,22 @@ timerLabel.Parent = gui
 local timerCorner = Instance.new("UICorner")
 timerCorner.Parent = timerLabel
 
+local posLabel = Instance.new("TextLabel")
+posLabel.Size = UDim2.new(0.12, 0, 0.08, 0)
+posLabel.Position = UDim2.new(0.03, 0, 0.03, 0)
+posLabel.BackgroundTransparency = 0.4
+posLabel.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+posLabel.TextScaled = true
+posLabel.TextColor3 = Color3.fromRGB(255, 220, 90)
+posLabel.Font = Enum.Font.GothamBold
+posLabel.Text = ""
+posLabel.Visible = false
+posLabel.Parent = gui
+local posCorner = Instance.new("UICorner")
+posCorner.Parent = posLabel
+
+local PLACE_NAMES = { "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th" }
+
 local results = Instance.new("Frame")
 results.Size = UDim2.new(0.4, 0, 0.34, 0)
 results.Position = UDim2.new(0.3, 0, 0.28, 0)
@@ -136,12 +152,14 @@ Bus.on("launch", function()
 	state = "Racing"
 	raceStart = os.clock()
 	timerLabel.Visible = true
+	posLabel.Visible = true
 	results.Visible = false
 end)
 
 Bus.on("reset", function()
 	state = "PreLaunch"
 	timerLabel.Visible = false
+	posLabel.Visible = false
 	results.Visible = false
 end)
 
@@ -152,12 +170,20 @@ local function finishRace()
 	if isRecord then
 		bestTime = t
 	end
+	local place = player:GetAttribute("RacePosition") :: number?
+	local total = player:GetAttribute("RacersTotal") :: number?
+	if place and total then
+		title.Text = ("%s / %d!"):format(PLACE_NAMES[place] or tostring(place), total)
+		title.TextColor3 = place == 1 and Color3.fromRGB(255, 220, 90) or Color3.fromRGB(220, 220, 230)
+	else
+		title.Text = "FINISH!"
+	end
 	timeLabel.Text = ("Time: %.2fs"):format(t)
 	bestLabel.Text = isRecord and "NEW SESSION BEST!" or ("Session best: %.2fs"):format(bestTime :: number)
-	title.Text = "FINISH!"
 	results.Visible = true
 	timerLabel.Visible = false
-	Bus.fire("finished", t)
+	posLabel.Visible = false
+	Bus.fire("finished", t, place)
 end
 
 -- ============ loop ============
@@ -166,6 +192,12 @@ RunService.Heartbeat:Connect(function()
 		return
 	end
 	timerLabel.Text = ("%.1f"):format(os.clock() - raceStart)
+
+	local place = player:GetAttribute("RacePosition") :: number?
+	local total = player:GetAttribute("RacersTotal") :: number?
+	if place and total then
+		posLabel.Text = ("%s/%d"):format(PLACE_NAMES[place] or tostring(place), total)
+	end
 
 	local kart = workspace:FindFirstChild(player.Name .. "_Kart")
 	local chassis = kart and kart:FindFirstChild("Chassis")

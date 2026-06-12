@@ -15,13 +15,13 @@ The stepwise plan to build everything in docs 01–12, from the current prototyp
 - [x] Smooth ribbon track generator v2 with editor-authored workflow
 - [x] Respawn nodes, fall recovery, chase camera, greybox HUD
 
-## M1 — Race loop core 🔨
+## M1 — Race loop core ✅
 
-- [ ] W1.1 ClientBus (shared client signal module) — cross-script events (launch, reset, finish)
-- [ ] W1.2 Race timer: starts on launch, live HUD readout
-- [ ] W1.3 Finish detection derived from FinishPad at runtime (no track regen needed)
-- [ ] W1.4 Results overlay: time, session best, Retry / Continue
-- [ ] W1.5 Race state machine formalized: PreLaunch → Racing → Finished (drives HUD visibility)
+- [x] W1.1 ClientBus (shared client signal module) — cross-script events (launch, reset, finish)
+- [x] W1.2 Race timer: starts on launch, live HUD readout
+- [x] W1.3 Finish detection derived from FinishPad at runtime (no track regen needed)
+- [x] W1.4 Results overlay: time, session best, Retry / Continue
+- [x] W1.5 Race state machine formalized: PreLaunch → Racing → Finished (drives HUD visibility)
 
 ## M2 — AI opponents & placement
 
