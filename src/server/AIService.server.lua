@@ -60,12 +60,7 @@ local function buildSpline(): SplineUtil.Spline?
 	return SplineUtil.new(points, 8)
 end
 
-local spline = buildSpline()
-if not spline then
-	warn("[AIService] No racing line available — bots disabled")
-	return
-end
-local line = spline :: SplineUtil.Spline
+local line: SplineUtil.Spline? = buildSpline()
 
 -- ============ bot karts ============
 type Bot = {
@@ -127,9 +122,13 @@ local function makeBot(i: number): Bot
 end
 
 local function poseBot(bot: Bot)
+	local l = line
+	if not l then
+		return
+	end
 	local d = math.max(bot.dist, 0)
-	local pos = line:PosAt(d)
-	local tangent = line:TangentAt(d)
+	local pos = l:PosAt(d)
+	local tangent = l:TangentAt(d)
 	local right = tangent:Cross(Vector3.yAxis).Unit
 	local cf = CFrame.lookAt(pos + right * bot.lateral + Vector3.new(0, 1, 0), pos + right * bot.lateral + tangent * 10)
 	bot.model:PivotTo(cf)
@@ -209,6 +208,22 @@ task.spawn(function()
 	end)
 end)
 
+-- ============ track swaps rebuild the racing line ============
+task.spawn(function()
+	local bus = ServerStorage:WaitForChild("TrackChangedBus", 60) :: BindableEvent?
+	if not bus then
+		return
+	end
+	bus.Event:Connect(function()
+		line = buildSpline()
+		for _, prog in playerProgress do
+			prog.dist = 0
+			prog.hint = 1
+		end
+		resetBots()
+	end)
+end)
+
 -- ============ power effects on bots (from PowerService) ============
 task.spawn(function()
 	local bus = ServerStorage:WaitForChild("BotEffectBus", 30) :: BindableEvent?
@@ -259,6 +274,10 @@ RunService.Heartbeat:Connect(function(dt)
 	if not raceActive then
 		return
 	end
+	local l = line
+	if not l then
+		return
+	end
 
 	-- furthest player progress (rubber-band reference)
 	local leadPlayerDist = 0
@@ -266,7 +285,7 @@ RunService.Heartbeat:Connect(function(dt)
 		local kart = workspace:FindFirstChild(player.Name .. "_Kart")
 		local chassis = kart and kart:FindFirstChild("Chassis")
 		if chassis and chassis:IsA("BasePart") then
-			local d, hint = line:NearestDist(chassis.Position, prog.hint)
+			local d, hint = l:NearestDist(chassis.Position, prog.hint)
 			-- only accept forward-ish movement (avoids snapping across switchbacks)
 			if d > prog.dist - 80 then
 				prog.dist = math.max(prog.dist, d)
@@ -290,15 +309,15 @@ RunService.Heartbeat:Connect(function(dt)
 		end
 		local gap = leadPlayerDist - bot.dist
 		local rubber = math.clamp(1 + (gap / RUBBERBAND_RANGE) * 0.35, RUBBERBAND_MIN, RUBBERBAND_MAX)
-		local tangent = line:TangentAt(math.max(bot.dist, 0))
+		local tangent = l:TangentAt(math.max(bot.dist, 0))
 		local slope = math.clamp(1 + math.max(-tangent.Y, 0) * 1.2, 1, SLOPE_SPEED_BONUS)
 		local cruise = cruiseOverride or bot.cruise
 		bot.dist += cruise * rubber * slope * dt
-		if bot.dist >= line.total then
+		if bot.dist >= l.total then
 			bot.finished = true
 			finishCounter += 1
 			bot.place = finishCounter
-			bot.dist = line.total
+			bot.dist = l.total
 		end
 		poseBot(bot)
 	end

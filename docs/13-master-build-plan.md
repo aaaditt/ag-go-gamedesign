@@ -52,16 +52,16 @@ The stepwise plan to build everything in docs 01–12, from the current prototyp
 - [x] W4.6 Champion Chase (boss enhanced freeze vs player, shield counters it, 3-win recruit flow)
 - [→] W4.7 Stars + rewards + CC gating + recruit persistence — lands in M5 with the economy
 
-## M5 — Garage, karts & economy
+## M5 — Garage, karts & economy ✅
 
-- [ ] W5.1 Kart part catalog config (6 slots, ≥30 parts, stats, costs) per docs/03
-- [ ] W5.2 Stat/CC math module (shared, used by garage + gates)
-- [ ] W5.3 Coins: earn rules (docs/06 payout table incl. anti-farm decay), spend
-- [ ] W5.4 Garage UI: Build / Upgrade / Paint / Loadouts tabs
-- [ ] W5.5 Kart visual assembly from equipped parts
-- [ ] W5.6 Test ramp behind garage area
-- [ ] W5.7 DataStore persistence (profile schema docs/06, session cache, BindToClose, retry)
-- [ ] W5.8 Daily quests + login streak
+- [x] W5.1 Kart part catalog (4 build slots, 13 parts v1; paint/topper slots + more parts → M8)
+- [x] W5.2 Stat/CC math module (shared)
+- [x] W5.3 Coins: finish-validated awards per docs/06 (anti-farm decay → M7 with dailies)
+- [x] W5.4 Garage UI (browse/equip/buy/upgrade; tabbed polish → M8)
+- [x] W5.5 Kart visual assembly from equipped parts
+- [→] W5.6 Test ramp — lands with the hub in M7
+- [x] W5.7 DataStore persistence with BindToClose
+- [→] W5.8 Daily quests + login streak — M7 live-ops cluster
 
 ## M6 — Tracks, episodes & navigation UI
 

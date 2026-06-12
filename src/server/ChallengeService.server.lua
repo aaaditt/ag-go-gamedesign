@@ -67,6 +67,17 @@ local function clearProps()
 	table.clear(fruitAlive)
 end
 
+-- track swaps rebuild the placement spline and clear stale props
+task.spawn(function()
+	local bus = ServerStorage:WaitForChild("TrackChangedBus", 60) :: BindableEvent?
+	if bus then
+		bus.Event:Connect(function()
+			spline = buildSpline()
+			clearProps()
+		end)
+	end
+end)
+
 local FRUIT_COLORS = { Color3.fromRGB(230, 60, 60), Color3.fromRGB(255, 170, 40), Color3.fromRGB(170, 80, 220) }
 
 local function spawnFruit(count: number)
@@ -140,6 +151,15 @@ local activeChallenge: { [Player]: string } = {}
 setChallengeRemote.OnServerEvent:Connect(function(player, challengeId)
 	local def = Challenges.byId[challengeId]
 	if not def then
+		return
+	end
+	-- CC gate (docs/06): kart must be powerful enough
+	local cc = (player:GetAttribute("CC") :: number?) or 0
+	if cc < def.ccRequired then
+		return
+	end
+	-- challenge must belong to the loaded track
+	if (workspace:GetAttribute("ActiveTrackId") :: string?) ~= def.trackId then
 		return
 	end
 	activeChallenge[player] = def.id

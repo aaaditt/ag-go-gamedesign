@@ -281,15 +281,16 @@ local CORNER_OFFSETS = {
 	Vector3.new(-0.8, 0, -0.8),
 }
 
-local function groundSample(): (boolean, number, Vector3, boolean)
+local function groundSample(): (boolean, number, Vector3, boolean, boolean)
 	if not chassis then
-		return false, 0, Vector3.yAxis, false
+		return false, 0, Vector3.yAxis, false, false
 	end
 	rayParams.FilterDescendantsInstances = { chassis.Parent :: Instance, player.Character :: Instance? }
 	local halfY = Tuning.KartSize.Y / 2
 	local rayLen = halfY + Tuning.RideHeight + Tuning.GroundRayMargin
 	local hits, sumY, sumNormal = 0, 0, Vector3.zero
 	local onBoostPad = false
+	local onIce = false
 	for _, off in CORNER_OFFSETS do
 		local origin = chassis.CFrame
 			* CFrame.new(off.X * Tuning.KartSize.X / 2, 0, off.Z * Tuning.KartSize.Z / 2)
@@ -301,12 +302,15 @@ local function groundSample(): (boolean, number, Vector3, boolean)
 			if result.Instance.Name == "BoostPad" then
 				onBoostPad = true
 			end
+			if result.Instance:GetAttribute("Ice") then
+				onIce = true
+			end
 		end
 	end
 	if hits < 2 then
-		return false, 0, Vector3.yAxis, false
+		return false, 0, Vector3.yAxis, false, false
 	end
-	return true, sumY / hits, sumNormal.Unit, onBoostPad
+	return true, sumY / hits, sumNormal.Unit, onBoostPad, onIce
 end
 
 local function updateLastNode()
@@ -355,7 +359,7 @@ RunService.Heartbeat:Connect(function(dt)
 		return
 	end
 
-	local grounded, groundY, groundNormal, onBoostPad = groundSample()
+	local grounded, groundY, groundNormal, onBoostPad, onIce = groundSample()
 
 	-- boost pad pickup
 	if onBoostPad then
@@ -445,8 +449,11 @@ RunService.Heartbeat:Connect(function(dt)
 		end
 		speed = math.max(speed, 0)
 
-		-- grip: velocity chases heading (loose in a skid)
+		-- grip: velocity chases heading (loose in a skid; looser still on ice)
 		local grip = drifting and Tuning.DriftGrip or Tuning.Grip
+		if onIce then
+			grip *= 0.5
+		end
 		velDir = velDir:Lerp(fwdOnSlope, math.clamp(grip * dt, 0, 1))
 		if velDir.Magnitude > 0.001 then
 			velDir = velDir.Unit

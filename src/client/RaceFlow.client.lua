@@ -169,20 +169,26 @@ end)
 local finishCFrame: CFrame? = nil
 local finishHalfSize: Vector3? = nil
 
-task.spawn(function()
-	local track = workspace:WaitForChild("Track", 60)
-	if not track then
-		return
-	end
-	local pad = track:WaitForChild("FinishPad", 60) :: BasePart?
-	if not pad then
-		warn("[RaceFlow] No FinishPad found — finish detection disabled")
-		return
-	end
-	-- detection box: pad footprint, raised to catch airborne crossings
-	finishCFrame = pad.CFrame * CFrame.new(0, 12, 0)
-	finishHalfSize = Vector3.new(pad.Size.X / 2, 14, pad.Size.Z / 2)
-end)
+local function computeFinishVolume()
+	finishCFrame = nil
+	finishHalfSize = nil
+	task.spawn(function()
+		local track = workspace:WaitForChild("Track", 60)
+		if not track then
+			return
+		end
+		local pad = track:WaitForChild("FinishPad", 60) :: BasePart?
+		if not pad then
+			warn("[RaceFlow] No FinishPad found — finish detection disabled")
+			return
+		end
+		-- detection box: pad footprint, raised to catch airborne crossings
+		finishCFrame = pad.CFrame * CFrame.new(0, 12, 0)
+		finishHalfSize = Vector3.new(pad.Size.X / 2, 14, pad.Size.Z / 2)
+	end)
+end
+computeFinishVolume()
+workspace:GetAttributeChangedSignal("ActiveTrackId"):Connect(computeFinishVolume)
 
 local function inFinishVolume(pos: Vector3): boolean
 	if not finishCFrame or not finishHalfSize then
