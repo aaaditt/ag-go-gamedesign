@@ -57,7 +57,49 @@ backBtn.Activated:Connect(function()
 	exitToLobbyRemote:FireServer()
 end)
 
+-- multiplayer queue + synchronized countdown
+local countdownLabel = Instance.new("TextLabel")
+countdownLabel.Size = UDim2.new(0.2, 0, 0.18, 0)
+countdownLabel.Position = UDim2.new(0.4, 0, 0.3, 0)
+countdownLabel.BackgroundTransparency = 1
+countdownLabel.TextScaled = true
+countdownLabel.Font = Enum.Font.GothamBold
+countdownLabel.TextColor3 = Color3.fromRGB(255, 220, 90)
+countdownLabel.TextStrokeTransparency = 0.3
+countdownLabel.Visible = false
+countdownLabel.Parent = gui
+
+task.spawn(function()
+	local groupRace = remotes:WaitForChild("GroupRace", 60) :: RemoteEvent?
+	if not groupRace then
+		return
+	end
+	groupRace.OnClientEvent:Connect(function(data)
+		if data.action ~= "countdown" then
+			return
+		end
+		Bus.fire("launchLock", true)
+		countdownLabel.Visible = true
+		for i = data.seconds or 3, 1, -1 do
+			countdownLabel.Text = tostring(i)
+			task.wait(1)
+		end
+		countdownLabel.Text = "GO!"
+		Bus.fire("launchLock", false)
+		task.delay(1, function()
+			countdownLabel.Visible = false
+		end)
+	end)
+end)
+
 lobbyUiRemote.OnClientEvent:Connect(function(data: { action: string, text: string? })
+	if data.action == "joinMpQueue" then
+		local joinQueue = remotes:FindFirstChild("JoinMpQueue")
+		if joinQueue and joinQueue:IsA("RemoteEvent") then
+			joinQueue:FireServer()
+		end
+		return
+	end
 	if data.action == "enteredPlay" then
 		backBtn.Visible = true
 		Bus.fire("playMode", true)

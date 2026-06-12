@@ -114,6 +114,24 @@ local function load(player: Player)
 	end
 	profiles[player] = profile
 	publish(player)
+
+	-- daily login streak (docs/13 W5.8 lean): new UTC day = streak + coins
+	local today = math.floor(os.time() / 86400)
+	local last = (profile :: any).lastDailyDay or 0
+	if today > last then
+		local streak = ((profile :: any).dailyStreak or 0)
+		streak = (today - last == 1) and streak + 1 or 1
+		;(profile :: any).dailyStreak = streak
+		;(profile :: any).lastDailyDay = today
+		local bonus = 100 + 25 * math.min(streak, 7)
+		profile.coins += bonus
+		publish(player)
+		task.delay(6, function()
+			if player.Parent then
+				rewardFxRemote:FireClient(player, { coins = bonus, stars = 0, daily = streak })
+			end
+		end)
+	end
 end
 
 local function save(player: Player)

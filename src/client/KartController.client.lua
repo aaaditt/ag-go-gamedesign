@@ -12,6 +12,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local Tuning = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Tuning"))
 local Bus = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ClientBus"))
+local InputState = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("InputState"))
 
 local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -29,6 +30,7 @@ local charge = 0
 local speed = 0
 local heading = 0
 local velDir: Vector3 = -Vector3.zAxis
+local surfFwd: Vector3 = -Vector3.zAxis -- persistent steered forward ON the surface
 local steerInput = 0
 
 local drifting = false
@@ -50,6 +52,7 @@ local function syncHeadingFromChassis()
 	heading = math.atan2(-look.X, -look.Z)
 	local flat = Vector3.new(look.X, 0, look.Z)
 	velDir = flat.Magnitude > 0.01 and flat.Unit or -Vector3.zAxis
+	surfFwd = velDir
 end
 
 local function findKart()
@@ -63,6 +66,30 @@ local function findKart()
 	launched, charging, charge, speed = false, false, 0, 0
 	boostTimer, driftTime, driftStage, lastNodeIdx = 0, 0, 0, 1
 	syncHeadingFromChassis()
+
+	-- juice: skid sparks + boost trail emitters (W8.2 lean)
+	local att = (chassis :: Part):FindFirstChild("RootAttachment")
+	if att and att:IsA("Attachment") and not att:FindFirstChild("DriftSparks") then
+		local sparks = Instance.new("ParticleEmitter")
+		sparks.Name = "DriftSparks"
+		sparks.Enabled = false
+		sparks.Rate = 60
+		sparks.Lifetime = NumberRange.new(0.2, 0.45)
+		sparks.Speed = NumberRange.new(8, 16)
+		sparks.SpreadAngle = Vector2.new(35, 35)
+		sparks.Size = NumberSequence.new(0.35)
+		sparks.Parent = att
+		local trail = Instance.new("ParticleEmitter")
+		trail.Name = "BoostTrail"
+		trail.Enabled = false
+		trail.Rate = 90
+		trail.Lifetime = NumberRange.new(0.3, 0.6)
+		trail.Speed = NumberRange.new(2, 5)
+		trail.Size = NumberSequence.new(0.8)
+		trail.Color = ColorSequence.new(Color3.fromRGB(255, 170, 50))
+		trail.Parent = att
+	end
+
 	chargeBack.Visible = true
 	chargeFill.Size = UDim2.new(0, 0, 1, 0)
 	hint.Text = "HOLD SPACE to charge the sling — release in the GREEN"
@@ -231,54 +258,87 @@ local function releaseDrift()
 	driftLabel.Text = ""
 end
 
--- ============ input ============
+-- ============ input (keyboard + touch merged; edge-detected per frame) ============
+local prevLaunchHeld = false
+local prevDriftHeld = false
+local launchLocked = false
+Bus.on("launchLock", function(locked: boolean)
+	launchLocked = locked
+end)
+
+local function doLaunch()
+	charging = false
+	launched = true
+	local power = charge
+	local mult = 1
+	if power >= Tuning.LaunchSweetZone[1] and power <= Tuning.LaunchSweetZone[2] then
+		mult = Tuning.LaunchPerfectBonus
+		hint.Text = "PERFECT LAUNCH!"
+	else
+		hint.Text = ""
+	end
+	speed = Tuning.LaunchMaxSpeed * power * mult
+	chargeBack.Visible = false
+	task.delay(1.5, function()
+		hint.Visible = false
+	end)
+	launchRemote:FireServer()
+	if mover then
+		mover.MaxForce = math.huge
+	end
+	if aligner then
+		aligner.MaxTorque = math.huge
+	end
+	Bus.fire("launch")
+end
+
+-- merges keyboard + touch each frame; returns held states
+local function readInputs(): (boolean, boolean, boolean, boolean)
+	local kbSteer = 0
+	if UserInputService:IsKeyDown(Enum.KeyCode.A) or UserInputService:IsKeyDown(Enum.KeyCode.Left) then
+		kbSteer -= 1
+	end
+	if UserInputService:IsKeyDown(Enum.KeyCode.D) or UserInputService:IsKeyDown(Enum.KeyCode.Right) then
+		kbSteer += 1
+	end
+	steerInput = math.clamp(kbSteer + InputState.steer, -1, 1)
+	local throttle = UserInputService:IsKeyDown(Enum.KeyCode.W)
+		or UserInputService:IsKeyDown(Enum.KeyCode.Up)
+		or InputState.throttle
+	local braking = UserInputService:IsKeyDown(Enum.KeyCode.S)
+		or UserInputService:IsKeyDown(Enum.KeyCode.Down)
+		or InputState.brake
+	local spaceDown = UserInputService:IsKeyDown(Enum.KeyCode.Space)
+	local launchHeld = spaceDown or InputState.launchHeld
+	local glideHeld = spaceDown or InputState.glideHeld
+	local driftHeld = UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or InputState.drift
+	-- drift edges
+	if driftHeld and not prevDriftHeld and launched then
+		drifting = true
+		driftTime = 0
+	elseif prevDriftHeld and not driftHeld and drifting then
+		releaseDrift()
+	end
+	prevDriftHeld = driftHeld
+	-- launch charge edges (locked during multiplayer countdowns)
+	if not launched and not launchLocked then
+		if launchHeld and not prevLaunchHeld then
+			charging = true
+			charge = 0
+		elseif prevLaunchHeld and not launchHeld and charging then
+			doLaunch()
+		end
+	end
+	prevLaunchHeld = launchHeld
+	return throttle, braking, glideHeld, driftHeld
+end
+
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then
 		return
 	end
-	if input.KeyCode == Enum.KeyCode.Space then
-		if not launched then
-			charging = true
-			charge = 0
-		end
-		-- airborne: Space is handled as glide in the main loop (held check)
-	elseif input.KeyCode == Enum.KeyCode.LeftShift then
-		if launched then
-			drifting = true
-			driftTime = 0
-		end
-	elseif input.KeyCode == Enum.KeyCode.R then
+	if input.KeyCode == Enum.KeyCode.R then
 		resetToStart()
-	end
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-	if input.KeyCode == Enum.KeyCode.Space and charging and not launched then
-		charging = false
-		launched = true
-		local power = charge
-		local mult = 1
-		if power >= Tuning.LaunchSweetZone[1] and power <= Tuning.LaunchSweetZone[2] then
-			mult = Tuning.LaunchPerfectBonus
-			hint.Text = "PERFECT LAUNCH!"
-		else
-			hint.Text = ""
-		end
-		speed = Tuning.LaunchMaxSpeed * power * mult
-		chargeBack.Visible = false
-		task.delay(1.5, function()
-			hint.Visible = false
-		end)
-		launchRemote:FireServer()
-		if mover then
-			mover.MaxForce = math.huge
-		end
-		if aligner then
-			aligner.MaxTorque = math.huge
-		end
-		Bus.fire("launch")
-	elseif input.KeyCode == Enum.KeyCode.LeftShift then
-		releaseDrift()
 	end
 end)
 
@@ -355,15 +415,7 @@ RunService.Heartbeat:Connect(function(dt)
 		return
 	end
 
-	steerInput = 0
-	if UserInputService:IsKeyDown(Enum.KeyCode.A) or UserInputService:IsKeyDown(Enum.KeyCode.Left) then
-		steerInput -= 1
-	end
-	if UserInputService:IsKeyDown(Enum.KeyCode.D) or UserInputService:IsKeyDown(Enum.KeyCode.Right) then
-		steerInput += 1
-	end
-	local throttle = UserInputService:IsKeyDown(Enum.KeyCode.W) or UserInputService:IsKeyDown(Enum.KeyCode.Up)
-	local braking = UserInputService:IsKeyDown(Enum.KeyCode.S) or UserInputService:IsKeyDown(Enum.KeyCode.Down)
+	local throttle, braking, glideHeld = readInputs()
 
 	if charging then
 		charge = math.min(1, charge + dt / Tuning.LaunchChargeTime)
@@ -413,8 +465,7 @@ RunService.Heartbeat:Connect(function(dt)
 		end
 	elseif not grounded then
 		steerRate = math.rad(Tuning.AirControlDeg)
-		local glidingNow = UserInputService:IsKeyDown(Enum.KeyCode.Space)
-		if glidingNow then
+		if glideHeld then
 			steerRate *= Tuning.GlideAirSteerMult
 		end
 	end
@@ -430,10 +481,12 @@ RunService.Heartbeat:Connect(function(dt)
 
 	if grounded then
 		local normal = groundNormal
-		-- Wild Geometry: forward lives ON the surface — project travel
-		-- direction onto the surface plane and steer by rotating around the
-		-- surface NORMAL. This is what lets karts drive loops and ceilings.
-		local fwdOnSlope = velDir - normal * velDir:Dot(normal)
+		-- Wild Geometry: the PERSISTENT steered forward (surfFwd) lives on the
+		-- surface. Project it onto the current plane (continuity across slope
+		-- changes), rotate it around the surface NORMAL by the steering input
+		-- at full authority — velDir then chases it through grip. This is the
+		-- steering-vs-grip separation the original heading model had.
+		local fwdOnSlope = surfFwd - normal * surfFwd:Dot(normal)
 		if fwdOnSlope.Magnitude < 0.05 then
 			local look = chassis.CFrame.LookVector
 			fwdOnSlope = look - normal * look:Dot(normal)
@@ -442,6 +495,7 @@ RunService.Heartbeat:Connect(function(dt)
 		if steerInput ~= 0 then
 			fwdOnSlope = CFrame.fromAxisAngle(normal, -steerInput * steerRate * dt):VectorToWorldSpace(fwdOnSlope)
 		end
+		surfFwd = fwdOnSlope
 		-- keep world heading synced so leaving the ground feels continuous
 		local flatFwd = Vector3.new(fwdOnSlope.X, 0, fwdOnSlope.Z)
 		if flatFwd.Magnitude > 0.05 then
@@ -513,9 +567,10 @@ RunService.Heartbeat:Connect(function(dt)
 		if drifting then
 			releaseDrift() -- can't skid in the air; bank whatever you charged
 		end
-		local gliding = UserInputService:IsKeyDown(Enum.KeyCode.Space)
+		local gliding = glideHeld
 		local flat = Vector3.new(headingDir.X, 0, headingDir.Z).Unit * speed
 		velDir = Vector3.new(headingDir.X, 0, headingDir.Z).Unit -- landings re-project from this
+		surfFwd = velDir
 		mover.MaxForce = math.huge
 		if gliding then
 			-- glide: integrate gravity manually, but never fall faster than glide speed
@@ -536,6 +591,22 @@ RunService.Heartbeat:Connect(function(dt)
 	updateLastNode()
 	speedLabel.Text = ("%d"):format(speed)
 	speedLabel.TextColor3 = boostTimer > 0 and Color3.fromRGB(255, 170, 50) or Color3.new(1, 1, 1)
+
+	-- juice emitters track state
+	local att = chassis:FindFirstChild("RootAttachment")
+	if att then
+		local sparks = att:FindFirstChild("DriftSparks") :: ParticleEmitter?
+		if sparks then
+			sparks.Enabled = grounded and drifting
+			if driftStage > 0 then
+				sparks.Color = ColorSequence.new(DRIFT_COLORS[driftStage])
+			end
+		end
+		local trail = att:FindFirstChild("BoostTrail") :: ParticleEmitter?
+		if trail then
+			trail.Enabled = boostTimer > 0
+		end
+	end
 
 	if chassis.Position.Y < Tuning.FallY then
 		fallRespawn()

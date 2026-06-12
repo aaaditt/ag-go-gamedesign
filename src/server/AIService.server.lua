@@ -331,6 +331,14 @@ RunService.Heartbeat:Connect(function(dt)
 	positionTick += dt
 	if positionTick >= 0.1 then
 		positionTick = 0
+		-- racing players (started moving) count in each other's positions
+		local racingPlayers = 0
+		for _, prog in playerProgress do
+			if prog.dist > 5 then
+				racingPlayers += 1
+			end
+		end
+		racingPlayers = math.max(racingPlayers, 1)
 		for player, prog in playerProgress do
 			local ahead = 0
 			for i, bot in bots do
@@ -338,8 +346,13 @@ RunService.Heartbeat:Connect(function(dt)
 					ahead += 1
 				end
 			end
+			for other, otherProg in playerProgress do
+				if other ~= player and otherProg.dist > 5 and otherProg.dist > prog.dist then
+					ahead += 1
+				end
+			end
 			player:SetAttribute("RacePosition", ahead + 1)
-			player:SetAttribute("RacersTotal", activeBotCount + 1)
+			player:SetAttribute("RacersTotal", activeBotCount + racingPlayers)
 		end
 	end
 end)

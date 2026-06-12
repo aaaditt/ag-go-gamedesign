@@ -84,15 +84,25 @@ Next session: run the test protocol, fix what breaks, then resume M7.
 - [x] W6.5d Tracks re-authored: loops from e1t3 on, double loop on Mesa Madness, e3t3 "Avalanche Apocalypse" = dive+loop+spiral+gaps+loop
 - [x] W6.5e Bot pose guards on vertical/inverted spline tangents
 
-## M7 — Hub, multiplayer & competition
+## M7 — Hub, multiplayer & competition ✅ (v1-lean; deferred items below)
 
-- [ ] W7.1 Hub plaza (spawn, race gates, garage door, kiosks; walkable avatar mode ↔ kart mode)
-- [ ] W7.2 In-server quick race: lobby gate, ready-up, multi-player race instances, bots fill
-- [ ] W7.3 Server race authority hardening + anti-cheat floors (node sequence, min-time)
-- [ ] W7.4 Per-track leaderboards (OrderedDataStore) + validated-run flag
-- [ ] W7.5 Ghosts: record best run telemetry, replay as translucent kart in Time Boom
-- [ ] W7.6 Weekly tournament service (5-event rotation, points, season reset)
-- [ ] W7.7 Private lobbies (join codes, host rules, reduced rewards)
+- [x] W7.1 Hub plaza (lobby-first flow, portals, walkable ↔ kart mode) — docs/14
+- [x] W7.2 Group races: MP portal queue (12 s window / 8 cap), synchronized countdown with launch lock, bots fill the grid, player-vs-player positions
+- [x] W7.3 Finish validation (launch handshake + min-time floor); deeper node-sequence checks → post-launch hardening
+- [x] W7.4 Per-track leaderboards (OrderedDataStore, top-10 query)
+- [x] W5.8 Daily login streak (UTC day, escalating coins)
+- [→] W7.5 Ghosts — post-launch
+- [→] W7.6 Weekly tournament service — post-launch (needs live-ops cadence decisions)
+- [→] W7.7 Private lobbies — post-launch
+
+## M8 — Presentation, FTUE & ship 🔨 (code parts done; asset/account parts need the owner)
+
+- [x] W8.2-lean VFX: stage-colored skid sparks + boost trail emitters
+- [x] W8.4-lean Mobile touch controls (steer/gas/skid/sling-glide buttons); gamepad mapping → next pass
+- [ ] W8.1 Character & kart visual models — needs original art direction session with the owner
+- [ ] W8.3 Audio — needs sound assets chosen/licensed by the owner (no Rovio audio!)
+- [ ] W8.5 FTUE tutorial — build after the owner signs off on final flow
+- [ ] W8.6/8.7/8.8 Badges, analytics, perf pass, icon/thumbnails, questionnaire, PUBLISH — requires the owner's Roblox account + branding decision (docs/07 §4)
 
 ## M8 — Presentation, FTUE & ship
 

@@ -85,7 +85,7 @@ local function onPortalTouch(portalName: string, hit: BasePart)
 	elseif portalName == "MapBoard" then
 		lobbyUiRemote:FireClient(player, { action = "openMap" })
 	elseif portalName == "MultiplayerPortal" then
-		lobbyUiRemote:FireClient(player, { action = "toast", text = "Multiplayer races are coming soon! (M7)" })
+		lobbyUiRemote:FireClient(player, { action = "joinMpQueue" })
 	end
 end
 
