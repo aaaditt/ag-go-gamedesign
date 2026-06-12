@@ -8,7 +8,7 @@ A Roblox recreation of the spirit of **Angry Birds Go!** — the discontinued 20
 
 Greybox hill + one kart. Goal: make driving FUN before building anything else.
 
-**Controls (PC):** hold **Space** to charge the slingshot, release in the green zone · **A/D** steer · hold **LeftShift** to drift (release after 0.8s+ for a boost) · **R** respawn.
+**Controls (PC):** hold **Space** to charge the slingshot (release in the green) · **W/S** throttle/brake · **A/D** steer · hold **Shift** to skid (3 charge stages → release for boost) · hold **Space** in the air to **glide** · **R** reset to start. Orange neon strips = boost pads. Full mechanics spec: [docs/12](docs/12-driving-mechanics-spec.md).
 
 ## Running it (feel-test loop)
 

@@ -1,10 +1,9 @@
 --!strict
--- Phase 1 driving model (docs/05): slingshot launch, downhill speed,
--- steering, drift + boost, respawn. Runs on the owning client.
+-- Driving model v3 (docs/12): throttle, momentum slope rules, 3-stage skid
+-- boosts, glide, boost pads — on hover suspension (docs/11). Owning client.
 --
--- Controls (PC):  A/D or ←/→ steer · LeftShift hold = drift · Space hold+release = slingshot launch
---                 R = respawn to last node
--- Controls (touch): left/right screen halves steer · drift button · hold anywhere at start = launch
+-- Controls: W/S throttle/brake · A/D steer · Shift hold = skid (release = boost)
+--           Space = slingshot charge at start, GLIDE while airborne · R = reset
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -14,8 +13,9 @@ local UserInputService = game:GetService("UserInputService")
 local Tuning = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Tuning"))
 
 local player = Players.LocalPlayer
-local respawnRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RequestRespawn") :: RemoteEvent
-local launchRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RequestLaunch") :: RemoteEvent
+local remotes = ReplicatedStorage:WaitForChild("Remotes")
+local respawnRemote = remotes:WaitForChild("RequestRespawn") :: RemoteEvent
+local launchRemote = remotes:WaitForChild("RequestLaunch") :: RemoteEvent
 
 -- ============ state ============
 local chassis: Part? = nil
@@ -24,17 +24,32 @@ local aligner: AlignOrientation? = nil
 
 local launched = false
 local charging = false
-local charge = 0 -- 0..1
+local charge = 0
 local speed = 0
-local heading = 0 -- radians, world yaw
-local velDir: Vector3 = Vector3.zAxis * -1 -- actual travel direction (lags heading while drifting)
-local drifting = false
-local driftTime = 0
-local boostTimer = 0
-local lastNodeIdx = 1
+local heading = 0
+local velDir: Vector3 = -Vector3.zAxis
 local steerInput = 0
 
+local drifting = false
+local driftTime = 0
+local driftStage = 0
+
+local boostTimer = 0 -- time left at raised cap
+local boostCap = 0 -- cap while boosting (pad or drift release)
+
+local lastNodeIdx = 1
+
 -- ============ find my kart ============
+local function syncHeadingFromChassis()
+	if not chassis then
+		return
+	end
+	local look = chassis.CFrame.LookVector
+	heading = math.atan2(-look.X, -look.Z)
+	local flat = Vector3.new(look.X, 0, look.Z)
+	velDir = flat.Magnitude > 0.01 and flat.Unit or -Vector3.zAxis
+end
+
 local function findKart()
 	local kart = workspace:WaitForChild(player.Name .. "_Kart", 30)
 	if not kart then
@@ -43,12 +58,9 @@ local function findKart()
 	chassis = kart:WaitForChild("Chassis") :: Part
 	mover = chassis:WaitForChild("Mover") :: LinearVelocity
 	aligner = chassis:WaitForChild("Aligner") :: AlignOrientation
-	-- reset state for a fresh kart
 	launched, charging, charge, speed = false, false, 0, 0
-	boostTimer, driftTime, lastNodeIdx = 0, 0, 1
-	local look = chassis.CFrame.LookVector
-	heading = math.atan2(-look.X, -look.Z)
-	velDir = Vector3.new(look.X, 0, look.Z).Unit
+	boostTimer, driftTime, driftStage, lastNodeIdx = 0, 0, 0, 1
+	syncHeadingFromChassis()
 end
 task.spawn(findKart)
 workspace.ChildAdded:Connect(function(child)
@@ -58,7 +70,7 @@ workspace.ChildAdded:Connect(function(child)
 	end
 end)
 
--- ============ HUD (minimal greybox UI) ============
+-- ============ HUD (greybox) ============
 local gui = Instance.new("ScreenGui")
 gui.Name = "DriveHUD"
 gui.ResetOnSpawn = false
@@ -68,7 +80,6 @@ local chargeBack = Instance.new("Frame")
 chargeBack.Size = UDim2.new(0.3, 0, 0.03, 0)
 chargeBack.Position = UDim2.new(0.35, 0, 0.85, 0)
 chargeBack.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-chargeBack.Visible = true
 chargeBack.Parent = gui
 
 local sweetZone = Instance.new("Frame")
@@ -93,9 +104,18 @@ speedLabel.TextStrokeTransparency = 0.4
 speedLabel.Text = ""
 speedLabel.Parent = gui
 
+local driftLabel = Instance.new("TextLabel")
+driftLabel.Size = UDim2.new(0.2, 0, 0.045, 0)
+driftLabel.Position = UDim2.new(0.4, 0, 0.9, 0)
+driftLabel.BackgroundTransparency = 1
+driftLabel.TextScaled = true
+driftLabel.TextStrokeTransparency = 0.3
+driftLabel.Text = ""
+driftLabel.Parent = gui
+
 local hint = Instance.new("TextLabel")
-hint.Size = UDim2.new(0.5, 0, 0.04, 0)
-hint.Position = UDim2.new(0.25, 0, 0.79, 0)
+hint.Size = UDim2.new(0.6, 0, 0.04, 0)
+hint.Position = UDim2.new(0.2, 0, 0.79, 0)
 hint.BackgroundTransparency = 1
 hint.TextScaled = true
 hint.TextColor3 = Color3.new(1, 1, 1)
@@ -103,29 +123,29 @@ hint.TextStrokeTransparency = 0.4
 hint.Text = "HOLD SPACE to charge the sling — release in the GREEN"
 hint.Parent = gui
 
+local DRIFT_COLORS = {
+	Color3.fromRGB(90, 170, 255), -- stage 1: blue
+	Color3.fromRGB(255, 160, 60), -- stage 2: orange
+	Color3.fromRGB(220, 100, 255), -- stage 3: purple
+}
+
 -- ============ respawn/reset ============
 local respawning = false
-
-local function syncHeadingFromChassis()
-	if not chassis then
-		return
-	end
-	local look = chassis.CFrame.LookVector
-	heading = math.atan2(-look.X, -look.Z)
-	velDir = Vector3.new(look.X, 0, look.Z).Unit
-end
 
 local function resetToStart()
 	respawnRemote:FireServer(1)
 	launched, charging, charge, speed = false, false, 0, 0
-	drifting, driftTime, boostTimer = false, 0, 0
+	drifting, driftTime, driftStage = false, 0, 0
+	boostTimer, boostCap = 0, 0
 	lastNodeIdx = 1
 	chargeFill.Size = UDim2.new(0, 0, 1, 0)
 	chargeBack.Visible = true
+	driftLabel.Text = ""
 	hint.Text = "HOLD SPACE to charge the sling — release in the GREEN"
 	hint.Visible = true
 	if mover then
 		mover.MaxForce = 0
+		mover.VelocityConstraintMode = Enum.VelocityConstraintMode.Vector
 		mover.VectorVelocity = Vector3.zero
 	end
 	if aligner then
@@ -151,6 +171,34 @@ local function fallRespawn()
 	end)
 end
 
+-- ============ drift helpers ============
+local function currentDriftStage(): number
+	local stage = 0
+	for i, t in Tuning.DriftStageTimes do
+		if driftTime >= t then
+			stage = i
+		end
+	end
+	return stage
+end
+
+local function releaseDrift()
+	if driftStage > 0 then
+		boostCap = Tuning.DriftBoostSpeeds[driftStage]
+		boostTimer = Tuning.DriftBoostDurations[driftStage]
+		speed = math.max(speed, boostCap * 0.92) -- surge
+		hint.Text = ("SKID BOOST x%d!"):format(driftStage)
+		hint.Visible = true
+		task.delay(1, function()
+			if not charging then
+				hint.Visible = false
+			end
+		end)
+	end
+	drifting, driftTime, driftStage = false, 0, 0
+	driftLabel.Text = ""
+end
+
 -- ============ input ============
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then
@@ -161,8 +209,12 @@ UserInputService.InputBegan:Connect(function(input, processed)
 			charging = true
 			charge = 0
 		end
+		-- airborne: Space is handled as glide in the main loop (held check)
 	elseif input.KeyCode == Enum.KeyCode.LeftShift then
-		drifting = true
+		if launched then
+			drifting = true
+			driftTime = 0
+		end
 	elseif input.KeyCode == Enum.KeyCode.R then
 		resetToStart()
 	end
@@ -170,7 +222,6 @@ end)
 
 UserInputService.InputEnded:Connect(function(input)
 	if input.KeyCode == Enum.KeyCode.Space and charging and not launched then
-		-- LAUNCH
 		charging = false
 		launched = true
 		local power = charge
@@ -186,7 +237,7 @@ UserInputService.InputEnded:Connect(function(input)
 		task.delay(1.5, function()
 			hint.Visible = false
 		end)
-		launchRemote:FireServer() -- server unanchors + grants us physics ownership
+		launchRemote:FireServer()
 		if mover then
 			mover.MaxForce = math.huge
 		end
@@ -194,20 +245,14 @@ UserInputService.InputEnded:Connect(function(input)
 			aligner.MaxTorque = math.huge
 		end
 	elseif input.KeyCode == Enum.KeyCode.LeftShift then
-		if drifting and driftTime >= Tuning.DriftMinTime then
-			boostTimer = Tuning.DriftBoostDuration
-		end
-		drifting = false
-		driftTime = 0
+		releaseDrift()
 	end
 end)
 
--- ============ helpers ============
+-- ============ ground sampling (hover, docs/11) ============
 local rayParams = RaycastParams.new()
 rayParams.FilterType = Enum.RaycastFilterType.Exclude
 
--- Hover suspension sampling (docs/11): 4 corner rays, averaged.
--- Returns grounded, average ground Y under the chassis, average surface normal.
 local CORNER_OFFSETS = {
 	Vector3.new(0.8, 0, 0.8),
 	Vector3.new(-0.8, 0, 0.8),
@@ -215,16 +260,15 @@ local CORNER_OFFSETS = {
 	Vector3.new(-0.8, 0, -0.8),
 }
 
-local function groundSample(): (boolean, number, Vector3)
+local function groundSample(): (boolean, number, Vector3, boolean)
 	if not chassis then
-		return false, 0, Vector3.yAxis
+		return false, 0, Vector3.yAxis, false
 	end
 	rayParams.FilterDescendantsInstances = { chassis.Parent :: Instance, player.Character :: Instance? }
 	local halfY = Tuning.KartSize.Y / 2
 	local rayLen = halfY + Tuning.RideHeight + Tuning.GroundRayMargin
-	local hits = 0
-	local sumY = 0
-	local sumNormal = Vector3.zero
+	local hits, sumY, sumNormal = 0, 0, Vector3.zero
+	local onBoostPad = false
 	for _, off in CORNER_OFFSETS do
 		local origin = chassis.CFrame
 			* CFrame.new(off.X * Tuning.KartSize.X / 2, 0, off.Z * Tuning.KartSize.Z / 2)
@@ -233,23 +277,26 @@ local function groundSample(): (boolean, number, Vector3)
 			hits += 1
 			sumY += result.Position.Y
 			sumNormal += result.Normal
+			if result.Instance.Name == "BoostPad" then
+				onBoostPad = true
+			end
 		end
 	end
 	if hits < 2 then
-		return false, 0, Vector3.yAxis
+		return false, 0, Vector3.yAxis, false
 	end
-	return true, sumY / hits, sumNormal.Unit
+	return true, sumY / hits, sumNormal.Unit, onBoostPad
 end
 
 local function updateLastNode()
-	local anchor = workspace:FindFirstChild("Track")
-		and workspace.Track:FindFirstChild("RespawnNodes")
-		and workspace.Track.RespawnNodes:FindFirstChild("NodeAnchor")
+	local track = workspace:FindFirstChild("Track")
+	local anchor = track and track:FindFirstChild("RespawnNodes")
+	anchor = anchor and anchor:FindFirstChild("NodeAnchor")
 	if not anchor or not chassis then
 		return
 	end
 	local bestDist, bestIdx = math.huge, lastNodeIdx
-	for i, node in anchor:GetChildren() do
+	for _, node in anchor:GetChildren() do
 		if node:IsA("Attachment") then
 			local d = (node.WorldPosition - chassis.Position).Magnitude
 			if d < bestDist then
@@ -268,7 +315,6 @@ RunService.Heartbeat:Connect(function(dt)
 		return
 	end
 
-	-- steering input (keyboard; touch handled via ContextActionService later phases)
 	steerInput = 0
 	if UserInputService:IsKeyDown(Enum.KeyCode.A) or UserInputService:IsKeyDown(Enum.KeyCode.Left) then
 		steerInput -= 1
@@ -276,8 +322,9 @@ RunService.Heartbeat:Connect(function(dt)
 	if UserInputService:IsKeyDown(Enum.KeyCode.D) or UserInputService:IsKeyDown(Enum.KeyCode.Right) then
 		steerInput += 1
 	end
+	local throttle = UserInputService:IsKeyDown(Enum.KeyCode.W) or UserInputService:IsKeyDown(Enum.KeyCode.Up)
+	local braking = UserInputService:IsKeyDown(Enum.KeyCode.S) or UserInputService:IsKeyDown(Enum.KeyCode.Down)
 
-	-- slingshot charge
 	if charging then
 		charge = math.min(1, charge + dt / Tuning.LaunchChargeTime)
 		chargeFill.Size = UDim2.new(charge, 0, 1, 0)
@@ -287,81 +334,130 @@ RunService.Heartbeat:Connect(function(dt)
 		return
 	end
 
-	local grounded, groundY, groundNormal = groundSample()
+	local grounded, groundY, groundNormal, onBoostPad = groundSample()
 
-	-- heading
-	local steerRate = math.rad(Tuning.SteerRateDeg)
-		* (1 - Tuning.SteerHighSpeedPenalty * math.clamp(speed / Tuning.BaseTopSpeed, 0, 1))
-	if drifting and grounded then
-		steerRate *= Tuning.DriftSteerMult
-		driftTime += dt
+	-- boost pad pickup
+	if onBoostPad then
+		boostCap = Tuning.BoostPadSpeed
+		boostTimer = math.max(boostTimer, Tuning.BoostPadDuration)
+		speed = math.max(speed, Tuning.BoostPadSpeed)
 	end
-	if not grounded then
+	if boostTimer > 0 then
+		boostTimer -= dt
+		if boostTimer <= 0 then
+			boostCap = 0
+		end
+	end
+
+	-- steering
+	local speedFrac = math.clamp(speed / Tuning.DownhillMaxSpeed, 0, 1)
+	local steerRate = math.rad(Tuning.SteerRateDeg) * (1 - Tuning.SteerHighSpeedPenalty * speedFrac)
+	if grounded and drifting then
+		steerRate *= Tuning.DriftSteerMult
+		-- charge faster when steering harder (MK rule)
+		local chargeRate = 1 + (Tuning.DriftChargeSteerBonus - 1) * math.abs(steerInput)
+		driftTime += dt * chargeRate
+		local stage = currentDriftStage()
+		if stage ~= driftStage then
+			driftStage = stage
+		end
+		if driftStage > 0 then
+			driftLabel.Text = ("SKID %d"):format(driftStage)
+			driftLabel.TextColor3 = DRIFT_COLORS[driftStage]
+		end
+	elseif not grounded then
 		steerRate = math.rad(Tuning.AirControlDeg)
+		local glidingNow = UserInputService:IsKeyDown(Enum.KeyCode.Space)
+		if glidingNow then
+			steerRate *= Tuning.GlideAirSteerMult
+		end
 	end
 	heading -= steerInput * steerRate * dt
-
 	local headingDir = Vector3.new(-math.sin(heading), 0, -math.cos(heading))
 
-	-- speed model
 	if grounded then
 		local normal = groundNormal
-		-- forward projected onto the slope plane
 		local fwdOnSlope = (headingDir - normal * headingDir:Dot(normal)).Unit
-		local slopeAccel = -fwdOnSlope.Y * workspace.Gravity * Tuning.SlopeAccelFactor / 9.81 -- normalized feel factor
+
+		-- slope force: steeper = stronger (∝ sin); uphill costs at UphillDecelFactor
+		local slopeAccel = -fwdOnSlope.Y * workspace.Gravity * Tuning.SlopeAccelFactor / 9.81
 		if slopeAccel < 0 then
-			slopeAccel *= Tuning.UphillDecelFactor -- arcade momentum: ramps don't kill speed
+			slopeAccel *= Tuning.UphillDecelFactor
 		end
-		speed += (slopeAccel + Tuning.FlowAssist) * dt
-		speed -= Tuning.Drag * speed * dt
 
-		local topSpeed = Tuning.BaseTopSpeed * (boostTimer > 0 and Tuning.DriftBoostMult or 1)
-		speed = math.clamp(speed, 0, topSpeed)
+		-- engine/coast/brake (docs/12 speed model)
+		local accel = slopeAccel
+		if braking then
+			accel -= Tuning.BrakeDecel
+		elseif throttle then
+			if speed < Tuning.EngineTopSpeed then
+				accel += Tuning.EngineAccel
+			end
+		else
+			if slopeAccel <= 0.5 then -- flat or uphill: coast bleed
+				accel -= Tuning.CoastDecel
+			end
+		end
+		speed += accel * dt
 
-		-- velocity direction chases heading (loose while drifting)
+		-- caps: engine 90 / downhill 140 / boost overrides; above cap = gentle bleed
+		local cap = math.max(boostTimer > 0 and boostCap or 0, Tuning.DownhillMaxSpeed)
+		if speed > cap then
+			speed = cap
+		end
+		local softCap = boostTimer > 0 and boostCap
+			or (slopeAccel > 0.5 and Tuning.DownhillMaxSpeed or Tuning.EngineTopSpeed)
+		if speed > softCap then
+			speed = math.max(softCap, speed - Tuning.ExcessDecay * dt)
+		end
+		speed = math.max(speed, 0)
+
+		-- grip: velocity chases heading (loose in a skid)
 		local grip = drifting and Tuning.DriftGrip or Tuning.Grip
 		velDir = velDir:Lerp(fwdOnSlope, math.clamp(grip * dt, 0, 1))
 		if velDir.Magnitude > 0.001 then
 			velDir = velDir.Unit
 		end
 
-		-- hover servo: float at ride height above the averaged ground (docs/11)
+		-- hover servo
 		local targetY = groundY + Tuning.RideHeight + Tuning.KartSize.Y / 2
-		local hoverVel = math.clamp((targetY - chassis.Position.Y) * Tuning.HoverGain, -Tuning.HoverMaxVel, Tuning.HoverMaxVel)
+		local hoverVel =
+			math.clamp((targetY - chassis.Position.Y) * Tuning.HoverGain, -Tuning.HoverMaxVel, Tuning.HoverMaxVel)
 
 		mover.MaxForce = math.huge
 		mover.VelocityConstraintMode = Enum.VelocityConstraintMode.Vector
 		mover.VectorVelocity = velDir * speed + Vector3.new(0, hoverVel, 0)
 
-		-- orient to heading + slope
 		local right = headingDir:Cross(Vector3.yAxis).Unit
-		local upOnSlope = normal
-		local fwd = fwdOnSlope
-		aligner.CFrame = CFrame.fromMatrix(Vector3.zero, right, upOnSlope, -fwd)
+		aligner.CFrame = CFrame.fromMatrix(Vector3.zero, right, normal, -fwdOnSlope)
 	else
-		-- airborne: mover controls ONLY the horizontal plane; gravity fully owns Y
-		-- (Vector mode with huge force was cancelling gravity = the "gliding" bug)
-		mover.MaxForce = math.huge
-		mover.VelocityConstraintMode = Enum.VelocityConstraintMode.Plane
-		mover.PrimaryTangentAxis = Vector3.xAxis
-		mover.SecondaryTangentAxis = Vector3.zAxis
+		-- airborne
+		if drifting then
+			releaseDrift() -- can't skid in the air; bank whatever you charged
+		end
+		local gliding = UserInputService:IsKeyDown(Enum.KeyCode.Space)
 		local flat = Vector3.new(headingDir.X, 0, headingDir.Z).Unit * speed
-		mover.PlaneVelocity = Vector2.new(flat.X, flat.Z)
-
-		-- level out slowly toward heading
+		mover.MaxForce = math.huge
+		if gliding then
+			-- glide: integrate gravity manually, but never fall faster than glide speed
+			local vy = math.max(chassis.AssemblyLinearVelocity.Y - workspace.Gravity * dt, -Tuning.GlideFallSpeed)
+			mover.VelocityConstraintMode = Enum.VelocityConstraintMode.Vector
+			mover.VectorVelocity = Vector3.new(flat.X, vy, flat.Z)
+		else
+			-- free fall: gravity owns Y
+			mover.VelocityConstraintMode = Enum.VelocityConstraintMode.Plane
+			mover.PrimaryTangentAxis = Vector3.xAxis
+			mover.SecondaryTangentAxis = Vector3.zAxis
+			mover.PlaneVelocity = Vector2.new(flat.X, flat.Z)
+		end
 		local levelCF = CFrame.fromOrientation(0, heading, 0)
 		aligner.CFrame = aligner.CFrame:Lerp(levelCF, math.clamp(Tuning.LevelOutRate * dt, 0, 1))
 	end
 
-	if boostTimer > 0 then
-		boostTimer -= dt
-	end
-
-	-- bookkeeping
 	updateLastNode()
 	speedLabel.Text = ("%d"):format(speed)
+	speedLabel.TextColor3 = boostTimer > 0 and Color3.fromRGB(255, 170, 50) or Color3.new(1, 1, 1)
 
-	-- fall respawn
 	if chassis.Position.Y < Tuning.FallY then
 		fallRespawn()
 	end

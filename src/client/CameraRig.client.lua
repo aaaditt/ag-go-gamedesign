@@ -24,7 +24,7 @@ RunService.RenderStepped:Connect(function(dt)
 	camera.CameraType = Enum.CameraType.Scriptable
 
 	local vel = chassis.AssemblyLinearVelocity
-	local speedFrac = math.clamp(vel.Magnitude / Tuning.BaseTopSpeed, 0, 1.3)
+	local speedFrac = math.clamp(vel.Magnitude / Tuning.DownhillMaxSpeed, 0, 1.3)
 
 	-- follow point: behind the kart's facing, pulled back a touch more at speed
 	local look = chassis.CFrame.LookVector
