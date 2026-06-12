@@ -31,6 +31,10 @@ local rewardFxRemote = Instance.new("RemoteEvent")
 rewardFxRemote.Name = "RewardFx"
 rewardFxRemote.Parent = remotes
 
+local leaderboardFn = Instance.new("RemoteFunction")
+leaderboardFn.Name = "GetLeaderboard"
+leaderboardFn.Parent = remotes
+
 local rebuildKartBus = Instance.new("BindableEvent")
 rebuildKartBus.Name = "RebuildKartBus"
 rebuildKartBus.Parent = ServerStorage
@@ -264,4 +268,38 @@ reportFinishRemote.OnServerEvent:Connect(function(player, success, timeTaken)
 	p.coins += coins
 	publish(player)
 	rewardFxRemote:FireClient(player, { coins = coins, stars = stars })
+
+	-- per-challenge best-time leaderboard (validated runs only, docs/13 W7.4)
+	if success then
+		task.spawn(function()
+			pcall(function()
+				local board = DataStoreService:GetOrderedDataStore("TT1_" .. def.id)
+				local ms = math.floor(timeTaken * 1000)
+				local existing = board:GetAsync(tostring(player.UserId))
+				if not existing or ms < existing then
+					board:SetAsync(tostring(player.UserId), ms)
+				end
+			end)
+		end)
+	end
 end)
+
+-- top-10 query for the results screen
+leaderboardFn.OnServerInvoke = function(_, challengeId)
+	if typeof(challengeId) ~= "string" or not Challenges.byId[challengeId] then
+		return {}
+	end
+	local out = {}
+	pcall(function()
+		local board = DataStoreService:GetOrderedDataStore("TT1_" .. challengeId)
+		local page = board:GetSortedAsync(true, 10):GetCurrentPage()
+		for rank, entry in page do
+			local name = "???"
+			pcall(function()
+				name = Players:GetNameFromUserIdAsync(tonumber(entry.key) :: number)
+			end)
+			table.insert(out, { rank = rank, name = name, ms = entry.value })
+		end
+	end)
+	return out
+end
