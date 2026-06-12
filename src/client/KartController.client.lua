@@ -37,6 +37,7 @@ local driftStage = 0
 
 local boostTimer = 0 -- time left at raised cap
 local boostCap = 0 -- cap while boosting (pad or drift release)
+local frozenUntil = 0 -- boss freeze (Champion Chase)
 
 local lastNodeIdx = 1
 
@@ -181,6 +182,13 @@ Bus.on("powerBoost", function(cap: number, duration: number)
 	boostCap = cap
 	boostTimer = duration
 	speed = math.max(speed, cap * 0.92)
+end)
+
+-- boss powers against us (Champion Chase)
+Bus.on("playerFrozen", function(duration: number)
+	frozenUntil = os.clock() + duration
+	boostTimer = 0
+	boostCap = 0
 end)
 
 -- ============ drift helpers ============
@@ -412,6 +420,11 @@ RunService.Heartbeat:Connect(function(dt)
 			end
 		end
 		speed += accel * dt
+
+		-- boss freeze: speed crushed while frozen
+		if os.clock() < frozenUntil then
+			speed = math.min(speed, 12)
+		end
 
 		-- caps: engine 90 / downhill 140 / boost overrides; above cap = gentle bleed
 		local cap = math.max(boostTimer > 0 and boostCap or 0, Tuning.DownhillMaxSpeed)

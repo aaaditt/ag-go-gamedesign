@@ -17,6 +17,11 @@ local state: RaceState = "PreLaunch"
 local raceStart = 0
 local bestTime: number? = nil
 
+-- mode context (M4)
+local challenge: { [string]: any }? = nil
+local slalomPenalty = 0
+local chaseWins: { [string]: number } = {} -- bossId → session wins
+
 -- ============ UI ============
 local gui = Instance.new("ScreenGui")
 gui.Name = "RaceHUD"
@@ -52,6 +57,47 @@ local posCorner = Instance.new("UICorner")
 posCorner.Parent = posLabel
 
 local PLACE_NAMES = { "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th" }
+
+-- fruit gauge (FruitSplat)
+local gaugeBack = Instance.new("Frame")
+gaugeBack.Size = UDim2.new(0.3, 0, 0.025, 0)
+gaugeBack.Position = UDim2.new(0.35, 0, 0.11, 0)
+gaugeBack.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+gaugeBack.Visible = false
+gaugeBack.Parent = gui
+local gaugeFill = Instance.new("Frame")
+gaugeFill.Size = UDim2.new(0, 0, 1, 0)
+gaugeFill.BackgroundColor3 = Color3.fromRGB(230, 90, 200)
+gaugeFill.Parent = gaugeBack
+local gaugeText = Instance.new("TextLabel")
+gaugeText.Size = UDim2.new(1, 0, 1.6, 0)
+gaugeText.Position = UDim2.new(0, 0, -1.7, 0)
+gaugeText.BackgroundTransparency = 1
+gaugeText.TextScaled = true
+gaugeText.Font = Enum.Font.GothamBold
+gaugeText.TextColor3 = Color3.fromRGB(255, 180, 240)
+gaugeText.TextStrokeTransparency = 0.5
+gaugeText.Parent = gaugeBack
+
+local flashLabel = Instance.new("TextLabel")
+flashLabel.Size = UDim2.new(0.3, 0, 0.05, 0)
+flashLabel.Position = UDim2.new(0.35, 0, 0.16, 0)
+flashLabel.BackgroundTransparency = 1
+flashLabel.TextScaled = true
+flashLabel.Font = Enum.Font.GothamBold
+flashLabel.TextStrokeTransparency = 0.4
+flashLabel.Text = ""
+flashLabel.Parent = gui
+
+local function flash(text: string, color: Color3)
+	flashLabel.Text = text
+	flashLabel.TextColor3 = color
+	task.delay(1.2, function()
+		if flashLabel.Text == text then
+			flashLabel.Text = ""
+		end
+	end)
+end
 
 local results = Instance.new("Frame")
 results.Size = UDim2.new(0.4, 0, 0.34, 0)
@@ -148,12 +194,29 @@ local function inFinishVolume(pos: Vector3): boolean
 end
 
 -- ============ state transitions ============
+Bus.on("challenge", function(def)
+	challenge = def
+end)
+
+Bus.on("gateMissed", function()
+	local penalty = challenge and challenge.gatePenalty or 4
+	slalomPenalty += penalty
+	flash(("MISSED GATE  −%ds!"):format(penalty), Color3.fromRGB(255, 90, 90))
+end)
+
+Bus.on("gatePassed", function()
+	flash("GATE ✓", Color3.fromRGB(120, 230, 130))
+end)
+
 Bus.on("launch", function()
 	state = "Racing"
 	raceStart = os.clock()
+	slalomPenalty = 0
 	timerLabel.Visible = true
-	posLabel.Visible = true
 	results.Visible = false
+	local mode = challenge and challenge.mode or "Race"
+	posLabel.Visible = (mode == "Race" or mode == "Versus" or mode == "ChampionChase")
+	gaugeBack.Visible = (mode == "FruitSplat")
 end)
 
 Bus.on("reset", function()
@@ -161,29 +224,65 @@ Bus.on("reset", function()
 	timerLabel.Visible = false
 	posLabel.Visible = false
 	results.Visible = false
+	gaugeBack.Visible = false
+	slalomPenalty = 0
 end)
 
-local function finishRace()
+local function finishRace(success: boolean, failReason: string?)
 	state = "Finished"
 	local t = os.clock() - raceStart
-	local isRecord = bestTime == nil or t < bestTime :: number
-	if isRecord then
-		bestTime = t
-	end
+	local mode = challenge and challenge.mode or "Race"
 	local place = player:GetAttribute("RacePosition") :: number?
 	local total = player:GetAttribute("RacersTotal") :: number?
-	if place and total then
+
+	if not success then
+		title.Text = failReason or "FAILED!"
+		title.TextColor3 = Color3.fromRGB(255, 100, 90)
+		bestLabel.Text = "Try again!"
+	elseif mode == "ChampionChase" then
+		local bossId = challenge and challenge.bossId or "?"
+		if place == 1 then
+			chaseWins[bossId] = (chaseWins[bossId] or 0) + 1
+			local wins = chaseWins[bossId]
+			local needed = challenge and challenge.winsNeeded or 3
+			if wins >= needed then
+				title.Text = "CHAMPION RECRUITED! ★"
+				title.TextColor3 = Color3.fromRGB(120, 255, 140)
+				bestLabel.Text = "They've joined your flock!"
+			else
+				title.Text = ("CHASE WIN %d/%d!"):format(wins, needed)
+				title.TextColor3 = Color3.fromRGB(255, 220, 90)
+				bestLabel.Text = "Beat them again!"
+			end
+		else
+			title.Text = "THE CHAMPION ESCAPED!"
+			title.TextColor3 = Color3.fromRGB(255, 100, 90)
+			bestLabel.Text = ("Wins so far: %d/%d"):format(chaseWins[bossId] or 0, challenge and challenge.winsNeeded or 3)
+		end
+	elseif (mode == "Race" or mode == "Versus") and place and total then
 		title.Text = ("%s / %d!"):format(PLACE_NAMES[place] or tostring(place), total)
 		title.TextColor3 = place == 1 and Color3.fromRGB(255, 220, 90) or Color3.fromRGB(220, 220, 230)
+		local isRecord = bestTime == nil or t < bestTime :: number
+		if isRecord then
+			bestTime = t
+		end
+		bestLabel.Text = isRecord and "NEW SESSION BEST!" or ("Session best: %.2fs"):format(bestTime :: number)
 	else
-		title.Text = "FINISH!"
+		title.Text = mode == "FruitSplat" and "GAUGE CLEARED!" or "FINISH!"
+		title.TextColor3 = Color3.fromRGB(255, 220, 90)
+		local isRecord = bestTime == nil or t < bestTime :: number
+		if isRecord then
+			bestTime = t
+		end
+		bestLabel.Text = isRecord and "NEW SESSION BEST!" or ("Session best: %.2fs"):format(bestTime :: number)
 	end
+
 	timeLabel.Text = ("Time: %.2fs"):format(t)
-	bestLabel.Text = isRecord and "NEW SESSION BEST!" or ("Session best: %.2fs"):format(bestTime :: number)
 	results.Visible = true
 	timerLabel.Visible = false
 	posLabel.Visible = false
-	Bus.fire("finished", t, place)
+	gaugeBack.Visible = false
+	Bus.fire("finished", t, place, success)
 end
 
 -- ============ loop ============
@@ -191,17 +290,44 @@ RunService.Heartbeat:Connect(function()
 	if state ~= "Racing" then
 		return
 	end
-	timerLabel.Text = ("%.1f"):format(os.clock() - raceStart)
+	local elapsed = os.clock() - raceStart
+	local mode = challenge and challenge.mode or "Race"
+
+	-- timer: count down in timed modes, up otherwise
+	if mode == "TimeBoom" or mode == "Slalom" then
+		local remaining = (challenge and challenge.timeLimit or 60) - elapsed - slalomPenalty
+		timerLabel.Text = ("%.1f"):format(math.max(remaining, 0))
+		timerLabel.TextColor3 = remaining < 5 and Color3.fromRGB(255, 80, 80) or Color3.new(1, 1, 1)
+		if remaining <= 0 then
+			finishRace(false, "BOOM! 💥 OUT OF TIME")
+			return
+		end
+	else
+		timerLabel.Text = ("%.1f"):format(elapsed)
+	end
+
+	if mode == "FruitSplat" then
+		local count = (player:GetAttribute("FruitCount") :: number?) or 0
+		local target = challenge and challenge.fruitTarget or 20
+		gaugeFill.Size = UDim2.new(math.clamp(count / target, 0, 1), 0, 1, 0)
+		gaugeText.Text = ("FRUIT %d / %d"):format(count, target)
+	end
 
 	local place = player:GetAttribute("RacePosition") :: number?
 	local total = player:GetAttribute("RacersTotal") :: number?
-	if place and total then
+	if place and total and posLabel.Visible then
 		posLabel.Text = ("%s/%d"):format(PLACE_NAMES[place] or tostring(place), total)
 	end
 
 	local kart = workspace:FindFirstChild(player.Name .. "_Kart")
 	local chassis = kart and kart:FindFirstChild("Chassis")
 	if chassis and chassis:IsA("BasePart") and inFinishVolume(chassis.Position) then
-		finishRace()
+		if mode == "FruitSplat" then
+			local count = (player:GetAttribute("FruitCount") :: number?) or 0
+			local target = challenge and challenge.fruitTarget or 20
+			finishRace(count >= target, count < target and "NOT ENOUGH FRUIT!" or nil)
+		else
+			finishRace(true)
+		end
 	end
 end)

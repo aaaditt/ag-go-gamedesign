@@ -33,14 +33,14 @@ The stepwise plan to build everything in docs 01–12, from the current prototyp
 - [x] W2.6 Results with placement (reward hooks land with economy in M5)
 - [→] W2.7 Countdown start gate — moved into M4 challenge flow (it belongs to mode start UX)
 
-## M3 — Characters & powers
+## M3 — Characters & powers ✅
 
-- [ ] W3.1 Power framework: arm/fire/expire, one charge, server arbitration + client prediction
-- [ ] W3.2 The 10 powers (docs/02): Boost, Mega Boost, Freeze, Explosion, Forward Lob, Whirlwind, Lightning, Shield+Magnet, Knockback Balloon, Triple Throw
-- [ ] W3.3 Character roster config + simple character select on Pre-Race
-- [ ] W3.4 Power button HUD (+ Foreman ×3 pips)
-- [ ] W3.5 Bot power usage (dramatic-moment heuristic)
-- [ ] W3.6 Placeholder character visuals on karts (colored riders; real models in M8)
+- [x] W3.1 Power framework: server-tracked charges, self powers client-executed, bot powers server-applied
+- [x] W3.2 The 10 powers (docs/02 archetypes) — boosts, freeze, explosion, lob, whirlwind, lightning, shield, balloon, triple throw
+- [x] W3.3 Character roster config + picker UI (recruit gating lands with M4/M5)
+- [x] W3.4 Power button HUD with charge count (Q key)
+- [→] W3.5 Bot power usage vs player — lands with Champion Chase boss in M4
+- [x] W3.6 Placeholder character visuals (kart recolor; real models in M8)
 
 ## M4 — Modes & challenge ladder
 

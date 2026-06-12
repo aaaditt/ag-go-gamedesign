@@ -152,5 +152,20 @@ powerFxRemote.OnClientEvent:Connect(function(fx: { [string]: any })
 			end)
 		end
 	end
+	if fx.action == "bossFreeze" then
+		Bus.fire("playerFrozen", fx.duration or 1.5)
+		-- ice flash on the kart
+		local kart = workspace:FindFirstChild(player.Name .. "_Kart")
+		local chassis = kart and kart:FindFirstChild("Chassis")
+		if chassis and chassis:IsA("BasePart") then
+			local original = chassis.Color
+			chassis.Color = Color3.fromRGB(150, 220, 255)
+			task.delay(fx.duration or 1.5, function()
+				chassis.Color = original
+			end)
+		end
+	elseif fx.action == "shieldBlocked" then
+		Bus.fire("shieldBlocked")
+	end
 	-- "botHit" needs no client action (server already applied it); VFX in M8
 end)

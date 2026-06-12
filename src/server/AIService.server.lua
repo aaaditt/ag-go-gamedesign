@@ -87,6 +87,8 @@ botsFolder.Parent = workspace
 local bots: { Bot } = {}
 local raceActive = false
 local finishCounter = 0
+local activeBotCount = BOT_COUNT
+local cruiseOverride: number? = nil
 
 local function makeBot(i: number): Bot
 	local model = Instance.new("Model")
@@ -144,7 +146,13 @@ local function resetBots()
 		bot.dist = -(i * 9)
 		bot.finished = false
 		bot.place = nil
-		poseBot(bot)
+		bot.frozenUntil = 0
+		bot.chassis.Color = bot.baseColor
+		local active = i <= activeBotCount
+		bot.model.Parent = active and botsFolder or nil
+		if active then
+			poseBot(bot)
+		end
 	end
 end
 
@@ -187,8 +195,21 @@ respawnRemote.OnServerEvent:Connect(function(player, nodeIdx)
 	end
 end)
 
--- ============ power effects on bots (from PowerService) ============
+-- ============ per-challenge bot grid config (from ChallengeService) ============
 local ServerStorage = game:GetService("ServerStorage")
+task.spawn(function()
+	local bus = ServerStorage:WaitForChild("BotConfigBus", 30) :: BindableEvent?
+	if not bus then
+		return
+	end
+	bus.Event:Connect(function(config: { count: number?, cruiseOverride: number? })
+		activeBotCount = math.clamp(config.count or BOT_COUNT, 0, BOT_COUNT)
+		cruiseOverride = config.cruiseOverride
+		resetBots()
+	end)
+end)
+
+-- ============ power effects on bots (from PowerService) ============
 task.spawn(function()
 	local bus = ServerStorage:WaitForChild("BotEffectBus", 30) :: BindableEvent?
 	if not bus then
@@ -257,8 +278,8 @@ RunService.Heartbeat:Connect(function(dt)
 
 	-- advance bots
 	local now = os.clock()
-	for _, bot in bots do
-		if bot.finished then
+	for i, bot in bots do
+		if bot.finished or i > activeBotCount then
 			continue
 		end
 		if now < bot.frozenUntil then
@@ -271,7 +292,8 @@ RunService.Heartbeat:Connect(function(dt)
 		local rubber = math.clamp(1 + (gap / RUBBERBAND_RANGE) * 0.35, RUBBERBAND_MIN, RUBBERBAND_MAX)
 		local tangent = line:TangentAt(math.max(bot.dist, 0))
 		local slope = math.clamp(1 + math.max(-tangent.Y, 0) * 1.2, 1, SLOPE_SPEED_BONUS)
-		bot.dist += bot.cruise * rubber * slope * dt
+		local cruise = cruiseOverride or bot.cruise
+		bot.dist += cruise * rubber * slope * dt
 		if bot.dist >= line.total then
 			bot.finished = true
 			finishCounter += 1
@@ -287,13 +309,13 @@ RunService.Heartbeat:Connect(function(dt)
 		positionTick = 0
 		for player, prog in playerProgress do
 			local ahead = 0
-			for _, bot in bots do
-				if bot.dist > prog.dist then
+			for i, bot in bots do
+				if i <= activeBotCount and bot.dist > prog.dist then
 					ahead += 1
 				end
 			end
 			player:SetAttribute("RacePosition", ahead + 1)
-			player:SetAttribute("RacersTotal", BOT_COUNT + 1)
+			player:SetAttribute("RacersTotal", activeBotCount + 1)
 		end
 	end
 end)
