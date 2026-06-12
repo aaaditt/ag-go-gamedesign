@@ -2,10 +2,13 @@
 -- Phase 1: spawns one kart per player, seats them, hands physics ownership
 -- to their client, and handles respawn requests.
 
+local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
 
 local Tuning = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Tuning"))
+local KartParts = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("KartParts"))
 
 local remotes = Instance.new("Folder")
 remotes.Name = "Remotes"
@@ -55,16 +58,57 @@ local function buildKart(player: Player): Model
 	chassis.Parent = kart
 	kart.PrimaryPart = chassis
 
-	-- visual nose so heading is readable in greybox
+	-- visual assembly from the player's loadout (docs/13 W5.5)
+	local loadout = table.clone(KartParts.DEFAULT_LOADOUT)
+	pcall(function()
+		local json = player:GetAttribute("LoadoutJson") :: string?
+		if json then
+			for slot, id in HttpService:JSONDecode(json) do
+				loadout[slot] = id
+			end
+		end
+	end)
+	local function weldTo(part: BasePart)
+		part.CanCollide = false
+		part.Massless = true
+		part.Parent = kart
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = chassis
+		weld.Part1 = part
+		weld.Parent = chassis
+	end
+
+	local chassisPart = KartParts.byId[loadout.chassis]
+	if chassisPart then
+		chassis.Color = chassisPart.color
+	end
+
+	local wheelDef = KartParts.byId[loadout.wheels]
+	for _, off in { Vector3.new(-3.4, -0.6, -3), Vector3.new(3.4, -0.6, -3), Vector3.new(-3.4, -0.6, 3), Vector3.new(3.4, -0.6, 3) } do
+		local wheel = Instance.new("Part")
+		wheel.Shape = Enum.PartType.Cylinder
+		wheel.Size = Vector3.new(1.2, 3, 3)
+		wheel.Color = wheelDef and wheelDef.color or Color3.fromRGB(60, 60, 60)
+		wheel.Material = Enum.Material.SmoothPlastic
+		wheel.CFrame = chassis.CFrame * CFrame.new(off)
+		weldTo(wheel)
+	end
+
 	local nose = Instance.new("WedgePart")
 	nose.Size = Vector3.new(4, 2, 3)
-	nose.Color = Color3.fromRGB(255, 200, 60)
+	local frontDef = KartParts.byId[loadout.front]
+	nose.Color = frontDef and loadout.front ~= "none_f" and frontDef.color or Color3.fromRGB(255, 200, 60)
 	nose.CFrame = chassis.CFrame * CFrame.new(0, 0, -Tuning.KartSize.Z / 2 - 1.5)
-	nose.Parent = kart
-	local weld = Instance.new("WeldConstraint")
-	weld.Part0 = chassis
-	weld.Part1 = nose
-	weld.Parent = chassis
+	weldTo(nose)
+
+	if loadout.rear ~= "none_r" then
+		local rearDef = KartParts.byId[loadout.rear]
+		local fin = Instance.new("Part")
+		fin.Size = Vector3.new(5, 1, 1.5)
+		fin.Color = rearDef and rearDef.color or Color3.fromRGB(90, 90, 100)
+		fin.CFrame = chassis.CFrame * CFrame.new(0, 2.2, Tuning.KartSize.Z / 2 - 0.5)
+		weldTo(fin)
+	end
 
 	local seat = Instance.new("Seat")
 	seat.Size = Vector3.new(3, 1, 3)
@@ -161,6 +205,20 @@ Players.PlayerRemoving:Connect(function(player)
 		kart:Destroy()
 		kartsByPlayer[player] = nil
 	end
+end)
+
+-- Garage equips rebuild the kart (DataService fires after loadout changes)
+task.spawn(function()
+	local bus = ServerStorage:WaitForChild("RebuildKartBus", 30) :: BindableEvent?
+	if not bus then
+		return
+	end
+	bus.Event:Connect(function(player: Player)
+		local character = player.Character
+		if character then
+			spawnKartFor(player, character)
+		end
+	end)
 end)
 
 -- Launch: only the server may unanchor; then physics ownership goes to the rider.

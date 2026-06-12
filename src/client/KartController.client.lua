@@ -371,8 +371,9 @@ RunService.Heartbeat:Connect(function(dt)
 	end
 
 	-- steering
+	local statHandlingPre = (player:GetAttribute("StatHandling") :: number?) or 1
 	local speedFrac = math.clamp(speed / Tuning.DownhillMaxSpeed, 0, 1)
-	local steerRate = math.rad(Tuning.SteerRateDeg) * (1 - Tuning.SteerHighSpeedPenalty * speedFrac)
+	local steerRate = math.rad(Tuning.SteerRateDeg) * statHandlingPre * (1 - Tuning.SteerHighSpeedPenalty * speedFrac)
 	if grounded and drifting then
 		steerRate *= Tuning.DriftSteerMult
 		-- charge faster when steering harder (MK rule)
@@ -396,6 +397,11 @@ RunService.Heartbeat:Connect(function(dt)
 	heading -= steerInput * steerRate * dt
 	local headingDir = Vector3.new(-math.sin(heading), 0, -math.cos(heading))
 
+	-- kart stats from the equipped loadout (server-published attributes)
+	local statTop = (player:GetAttribute("StatTopSpeed") :: number?) or 1
+	local statAccel = (player:GetAttribute("StatAccel") :: number?) or 1
+	local statHandling = (player:GetAttribute("StatHandling") :: number?) or 1
+
 	if grounded then
 		local normal = groundNormal
 		local fwdOnSlope = (headingDir - normal * headingDir:Dot(normal)).Unit
@@ -407,12 +413,13 @@ RunService.Heartbeat:Connect(function(dt)
 		end
 
 		-- engine/coast/brake (docs/12 speed model)
+		local engineTop = Tuning.EngineTopSpeed * statTop
 		local accel = slopeAccel
 		if braking then
 			accel -= Tuning.BrakeDecel
 		elseif throttle then
-			if speed < Tuning.EngineTopSpeed then
-				accel += Tuning.EngineAccel
+			if speed < engineTop then
+				accel += Tuning.EngineAccel * statAccel
 			end
 		else
 			if slopeAccel <= 0.5 then -- flat or uphill: coast bleed
@@ -432,7 +439,7 @@ RunService.Heartbeat:Connect(function(dt)
 			speed = cap
 		end
 		local softCap = boostTimer > 0 and boostCap
-			or (slopeAccel > 0.5 and Tuning.DownhillMaxSpeed or Tuning.EngineTopSpeed)
+			or (slopeAccel > 0.5 and Tuning.DownhillMaxSpeed or engineTop)
 		if speed > softCap then
 			speed = math.max(softCap, speed - Tuning.ExcessDecay * dt)
 		end

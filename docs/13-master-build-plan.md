@@ -42,15 +42,15 @@ The stepwise plan to build everything in docs 01–12, from the current prototyp
 - [→] W3.5 Bot power usage vs player — lands with Champion Chase boss in M4
 - [x] W3.6 Placeholder character visuals (kart recolor; real models in M8)
 
-## M4 — Modes & challenge ladder
+## M4 — Modes & challenge ladder ✅
 
-- [ ] W4.1 Challenge config schema (mode, track, CC req, star thresholds, rewards) in ReplicatedStorage/Config
-- [ ] W4.2 Time Boom (bomb timer + checkpoint time pickups)
-- [ ] W4.3 Fruit Splat (fruit objects, gauge, fail/retry)
-- [ ] W4.4 Slalom (gate pairs, miss = TNT + time cut)
-- [ ] W4.5 Versus (1v1 vs configured rival)
-- [ ] W4.6 Champion Chase (boss with enhanced power, 3-win recruit, recruit celebration)
-- [ ] W4.7 Stars per mode (docs/06 criteria) + challenge unlock chain + CC gating
+- [x] W4.1 Challenge config schema (Challenges.lua)
+- [x] W4.2 Time Boom (countdown timer, red pulse, BOOM fail; checkpoint pickups → M8 juice)
+- [x] W4.3 Fruit Splat (fruit on racing line, gauge, fail/retry)
+- [x] W4.4 Slalom (gate pairs, miss = time penalty; TNT spawn visual → M8)
+- [x] W4.5 Versus (1v1 vs configured rival)
+- [x] W4.6 Champion Chase (boss enhanced freeze vs player, shield counters it, 3-win recruit flow)
+- [→] W4.7 Stars + rewards + CC gating + recruit persistence — lands in M5 with the economy
 
 ## M5 — Garage, karts & economy
 

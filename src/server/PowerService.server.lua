@@ -56,11 +56,18 @@ Players.PlayerRemoving:Connect(function(p)
 end)
 
 selectRemote.OnServerEvent:Connect(function(player, id)
-	-- v1: whole roster selectable; recruitment gating arrives with M4/M5
-	if typeof(id) == "string" and Characters.byId[id] then
-		player:SetAttribute("CharacterId", id)
-		recolorKart(player)
+	if typeof(id) ~= "string" or not Characters.byId[id] then
+		return
 	end
+	-- recruitment gating: starter is always allowed; others must be recruited
+	if id ~= Characters.DEFAULT then
+		local unlocked = (player:GetAttribute("UnlockedChars") :: string?) or ""
+		if not string.find("," .. unlocked .. ",", "," .. id .. ",", 1, true) then
+			return
+		end
+	end
+	player:SetAttribute("CharacterId", id)
+	recolorKart(player)
 end)
 
 launchRemote.OnServerEvent:Connect(function(player)

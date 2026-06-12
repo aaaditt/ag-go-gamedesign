@@ -282,8 +282,33 @@ local function finishRace(success: boolean, failReason: string?)
 	timerLabel.Visible = false
 	posLabel.Visible = false
 	gaugeBack.Visible = false
+	local reportRemote = ReplicatedStorage:FindFirstChild("Remotes")
+	reportRemote = reportRemote and reportRemote:FindFirstChild("ReportFinish")
+	if reportRemote and reportRemote:IsA("RemoteEvent") then
+		reportRemote:FireServer(success, t)
+	end
 	Bus.fire("finished", t, place, success)
 end
+
+-- reward display (server-awarded coins/stars)
+task.spawn(function()
+	local rewardRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RewardFx", 30) :: RemoteEvent?
+	if not rewardRemote then
+		return
+	end
+	local rewardLabel = Instance.new("TextLabel")
+	rewardLabel.Size = UDim2.new(1, 0, 0.12, 0)
+	rewardLabel.Position = UDim2.new(0, 0, 0.62, 0)
+	rewardLabel.BackgroundTransparency = 1
+	rewardLabel.TextScaled = true
+	rewardLabel.Font = Enum.Font.GothamBold
+	rewardLabel.TextColor3 = Color3.fromRGB(255, 220, 90)
+	rewardLabel.Text = ""
+	rewardLabel.Parent = results
+	rewardRemote.OnClientEvent:Connect(function(data)
+		rewardLabel.Text = ("+%d 🪙   %s"):format(data.coins or 0, string.rep("★", data.stars or 0))
+	end)
+end)
 
 -- ============ loop ============
 RunService.Heartbeat:Connect(function()
