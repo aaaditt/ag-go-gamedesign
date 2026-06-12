@@ -2,7 +2,7 @@
 /bin/
 
 # Rojo build artifacts
-build-test.rbxl
+build-test*.rbxl
 *.rbxl.lock
 
 # NOTE: place.rbxl IS committed — it holds the hand-edited track/world.
