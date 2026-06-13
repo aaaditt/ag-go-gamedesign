@@ -110,7 +110,11 @@ vs **owner-only** (assets/account/publish — listed at the bottom).
   5 steps (launch → steer → skid-boost → glide → power) advancing off bus events
   with timed fallbacks; persists `tutorialDone`; Skip button; replayable from
   Settings. Pure overlay, never blocks input.
-- [ ] **P9 — Badges / Analytics / Monetization** (server scaffolding, id-gated).
+- [x] **P9 — Badges / Analytics / Monetization** (server scaffolding, id-gated).
+  ✅ 2026-06-13 — `BadgeService` (awards on race/clear/recruit/allChampions),
+  `AnalyticsService` (onboarding funnel + coin economy, pcall-guarded),
+  `MonetizationService` (dev-product coin grants via GrantCoinsBus, game-pass
+  feature attributes incl. VIP double coins). All dormant until GameConfig ids set.
 - [ ] **P10 — VFX juice + bot visual parity + camera shake + perf guidance.**
 - [ ] **P11 — Hardening review** (read services; fix high-confidence bugs).
 
