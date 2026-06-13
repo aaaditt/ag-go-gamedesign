@@ -107,6 +107,36 @@ local function makeBot(i: number): Bot
 	nose.CanCollide = false
 	nose.Parent = model
 
+	-- cosmetic parity with the player kart (docs/15 P10). Created at offsets from
+	-- the origin (chassis is at origin here); model:PivotTo carries them along.
+	local hood = Instance.new("Part")
+	hood.Size = Vector3.new(4.8, 1.4, 4.5)
+	hood.Color = BOT_COLORS[i]
+	hood.Material = Enum.Material.SmoothPlastic
+	hood.Anchored = true
+	hood.CanCollide = false
+	hood.CFrame = CFrame.new(0, 1.5, -1)
+	hood.Parent = model
+	for _, sx in { -1, 1 } do
+		local hl = Instance.new("Part")
+		hl.Shape = Enum.PartType.Ball
+		hl.Size = Vector3.new(1.1, 1.1, 1.1)
+		hl.Color = Color3.fromRGB(255, 245, 200)
+		hl.Material = Enum.Material.Neon
+		hl.Anchored = true
+		hl.CanCollide = false
+		hl.CFrame = CFrame.new(sx * 1.8, 0.1, -4.8)
+		hl.Parent = model
+		local tl = Instance.new("Part")
+		tl.Size = Vector3.new(0.9, 0.7, 0.4)
+		tl.Color = Color3.fromRGB(220, 40, 40)
+		tl.Material = Enum.Material.Neon
+		tl.Anchored = true
+		tl.CanCollide = false
+		tl.CFrame = CFrame.new(sx * 1.8, 0.5, 4.7)
+		tl.Parent = model
+	end
+
 	model.Parent = botsFolder
 
 	return {

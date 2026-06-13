@@ -6,12 +6,45 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local HttpService = game:GetService("HttpService")
+
 local Tuning = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Tuning"))
+local Bus = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ClientBus"))
 
 local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
 
 local smoothedPos: Vector3? = nil
+
+-- ============ camera shake (docs/15 P10), honoring the settings toggle ============
+local shakeEnabled = true
+local function readShake()
+	local json = player:GetAttribute("SettingsJson") :: string?
+	if json then
+		local ok, t = pcall(HttpService.JSONDecode, HttpService, json)
+		if ok and type(t) == "table" and type(t.shake) == "boolean" then
+			shakeEnabled = t.shake
+		end
+	end
+end
+readShake()
+player:GetAttributeChangedSignal("SettingsJson"):Connect(readShake)
+
+local shake = 0 -- current shake magnitude (studs), decays each frame
+local function addShake(amount: number)
+	if shakeEnabled then
+		shake = math.min(shake + amount, 2.5)
+	end
+end
+Bus.on("boostPad", function()
+	addShake(0.7)
+end)
+Bus.on("skidBoost", function(stage: number)
+	addShake(0.3 + 0.2 * (stage or 1))
+end)
+Bus.on("landed", function(impact: number)
+	addShake(math.clamp((impact or 0) / 60, 0.2, 1.2))
+end)
 
 RunService.RenderStepped:Connect(function(dt)
 	local kart = workspace:FindFirstChild(player.Name .. "_Kart")
@@ -36,4 +69,13 @@ RunService.RenderStepped:Connect(function(dt)
 	smoothedPos = smoothedPos and smoothedPos:Lerp(targetPos, math.clamp(8 * dt, 0, 1)) or targetPos
 	camera.CFrame = CFrame.lookAt(smoothedPos :: Vector3, chassis.Position + flatLook * 8 + Vector3.new(0, 2, 0))
 	camera.FieldOfView = Tuning.CameraFOVBase + (Tuning.CameraFOVMax - Tuning.CameraFOVBase) * speedFrac
+
+	-- decaying random shake offset on top of the framed shot
+	if shake > 0.001 then
+		shake = math.max(0, shake - dt * 4)
+		local s = shake
+		camera.CFrame = camera.CFrame
+			* CFrame.new((math.random() - 0.5) * s, (math.random() - 0.5) * s, 0)
+			* CFrame.Angles(0, 0, (math.random() - 0.5) * s * 0.02)
+	end
 end)

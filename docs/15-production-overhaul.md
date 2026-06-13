@@ -115,7 +115,10 @@ vs **owner-only** (assets/account/publish — listed at the bottom).
   `AnalyticsService` (onboarding funnel + coin economy, pcall-guarded),
   `MonetizationService` (dev-product coin grants via GrantCoinsBus, game-pass
   feature attributes incl. VIP double coins). All dormant until GameConfig ids set.
-- [ ] **P10 — VFX juice + bot visual parity + camera shake + perf guidance.**
+- [x] **P10 — VFX juice + bot visual parity + camera shake + perf guidance.**
+  ✅ 2026-06-13 — landing dust burst + "landed" event (KartController), shield
+  Highlight on the shield power, camera shake on boost/skid/landing (CameraRig,
+  honors the settings toggle), bots get the hood/lights. Perf guidance below.
 - [ ] **P11 — Hardening review** (read services; fix high-confidence bugs).
 
 **Owner-only (cannot be completed in code):** original character/kart *meshes*,
@@ -149,11 +152,27 @@ sign-off, and the publish/questionnaire (docs/13 M8 W8.1/8.3/8.8).
 - **Bot pacing.** With halved `BOT_SPEEDS`, confirm bots are competitive but
   beatable across the longer tracks; nudge `BOT_SPEEDS`/`rubberband` if needed.
 
+## Performance guidance (M8 W8.7) — owner playtest decision
+
+The redesigned tracks are long and prop-dense (~3,000–6,000 anchored parts on the
+biggest tracks; only one track loaded at a time). On desktop this is fine; on a
+mid phone, watch the frame rate during the playtest (docs/16 §15).
+
+**StreamingEnabled is intentionally NOT turned on yet.** It would cull distant
+parts for memory/perf, BUT the client raycasts the road every frame for the hover —
+if the road ahead isn't streamed in, the kart thinks it's airborne and falls
+through. That's the worst possible first-playtest bug, so it's left off until you
+can verify in Studio. **Recommended when you do enable it** (Workspace properties):
+`StreamingEnabled = true`, `StreamingMinRadius = 512`, `StreamingTargetRadius =
+1024` (a big loaded bubble so the kart never outruns the streamed road at the new
+half-speed). Test every track end-to-end after flipping it; if the kart ever falls
+through, raise the radii or revert.
+
+Other perf levers if needed: lower `PROP_EVERY` density in TrackGen, drop the
+centre-line dashes, or reduce `BOT_COUNT`.
+
 ## Known follow-ups (not blocking)
 
-- **Bot kart visuals** still bare (colored chassis + nose). Player kart got the
-  hood/lights pass; give bots visual parity in a later polish pass (perf-aware:
-  7 bots).
 - **Skybox.** Using Roblox's procedural dynamic sky + Atmosphere (no Sky textures
   — keeps it asset-free / IP-safe). A custom skybox is an M8 art option.
 - **Valley floor** is one big flat plane ~900 studs below the start; reads as a

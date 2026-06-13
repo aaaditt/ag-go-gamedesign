@@ -41,6 +41,7 @@ local boostTimer = 0 -- time left at raised cap
 local boostCap = 0 -- cap while boosting (pad or drift release)
 local frozenUntil = 0 -- boss freeze (Champion Chase)
 local prevOnBoostPad = false -- rising-edge detector for the boost-pad SFX
+local prevGrounded = false -- rising-edge detector for landing dust/shake
 
 local lastNodeIdx = 1
 
@@ -96,6 +97,17 @@ local function findKart()
 		trail.Size = NumberSequence.new(0.8)
 		trail.Color = ColorSequence.new(Color3.fromRGB(255, 170, 50))
 		trail.Parent = att
+		local dust = Instance.new("ParticleEmitter")
+		dust.Name = "LandDust"
+		dust.Enabled = false -- emitted in bursts on landing
+		dust.Rate = 0
+		dust.Lifetime = NumberRange.new(0.3, 0.7)
+		dust.Speed = NumberRange.new(6, 14)
+		dust.SpreadAngle = Vector2.new(60, 60)
+		dust.Size = NumberSequence.new(1.6)
+		dust.Transparency = NumberSequence.new(0.3)
+		dust.Color = ColorSequence.new(Color3.fromRGB(220, 210, 190))
+		dust.Parent = att
 	end
 
 	chargeBack.Visible = true
@@ -236,6 +248,30 @@ Bus.on("playerFrozen", function(duration: number)
 	frozenUntil = os.clock() + duration
 	boostTimer = 0
 	boostCap = 0
+end)
+
+-- shield VFX: glowing outline on the kart for the duration (docs/15 P10)
+Bus.on("shield", function(duration: number)
+	if not chassis or not chassis.Parent then
+		return
+	end
+	local model = chassis.Parent
+	local hl = model:FindFirstChild("ShieldFX") :: Highlight?
+	if not hl then
+		hl = Instance.new("Highlight")
+		hl.Name = "ShieldFX"
+		hl.FillColor = Color3.fromRGB(90, 180, 255)
+		hl.FillTransparency = 0.6
+		hl.OutlineColor = Color3.fromRGB(150, 220, 255)
+		hl.Parent = model
+	end
+	local token = os.clock()
+	hl:SetAttribute("token", token)
+	task.delay(duration, function()
+		if hl and hl:GetAttribute("token") == token then
+			hl:Destroy()
+		end
+	end)
 end)
 
 -- ============ drift helpers ============
@@ -441,6 +477,20 @@ RunService.Heartbeat:Connect(function(dt)
 	if grounded and groundNormal.Y < 0.15 and speed < Tuning.InvertMinSpeed then
 		grounded = false
 	end
+
+	-- landing juice: dust burst + camera shake on touchdown after a real fall
+	if grounded and not prevGrounded then
+		local impact = -chassis.AssemblyLinearVelocity.Y
+		if impact > 18 then
+			local landAtt = chassis:FindFirstChild("RootAttachment")
+			local dust = landAtt and landAtt:FindFirstChild("LandDust")
+			if dust and dust:IsA("ParticleEmitter") then
+				dust:Emit(math.clamp(math.floor(impact / 4), 6, 30))
+			end
+			Bus.fire("landed", impact)
+		end
+	end
+	prevGrounded = grounded
 
 	-- boost pad pickup
 	if onBoostPad then
