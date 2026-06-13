@@ -98,29 +98,35 @@ function TrackGen.Build(def: TracksConfig.TrackDef): Folder
 	end
 
 	for segIdx, segDef in def.segments do
-		-- ============ vertical LOOP segments (Wild Geometry update) ============
+		-- ============ vertical LOOP segments (docs/15 P2: grand + integrated) ============
+		-- A clean vertical loop: pitch a full 360° so the EXIT heading stays
+		-- parallel to the entry (reads as "properly integrated", no off-axis
+		-- drift). The whole loop marches sideways by a FIXED amount so the exit
+		-- road clears the entry road regardless of how big the loop is. Step
+		-- count scales with radius so even a 140-stud loop stays smooth.
 		if segDef.loop then
-			local radius = segDef.radius or 26
-			local steps = 26
+			local radius = segDef.radius or 90
+			local steps = math.clamp(math.round(radius * 0.7), 28, 80)
 			local anglePer = 360 / steps
 			local stepLen = 2 * math.pi * radius / steps
+			local sidePerStep = (ROAD_WIDTH + 12) / steps -- exit clears entry, radius-independent
+			local loopStart = currentPitch
 			for _ = 1, steps do
 				currentPitch += anglePer
-				cursor = cursor * CFrame.Angles(0, math.rad(0.7), 0) -- inclined loop: exit offsets sideways
+				cursor = cursor * CFrame.new(sidePerStep, 0, 0) -- uniform sideways drift
 				local stepped = cursor * CFrame.Angles(math.rad(currentPitch), 0, 0)
 				local mid = stepped * CFrame.new(0, 0, -stepLen / 2)
 				placeStep(mid, segIdx)
 				cursor = stepped * CFrame.new(0, 0, -stepLen) * CFrame.Angles(math.rad(-currentPitch), 0, 0)
-					* CFrame.Angles(0, math.rad(0.7), 0)
 				sinceNode += stepLen
-				-- respawn nodes only on the right-side-up part of the loop
-				local p = currentPitch % 360
-				if sinceNode >= NODE_EVERY and (p < 50 or p > 310) then
+				-- respawn nodes only on the right-side-up (bottom) part of the loop
+				local p = (currentPitch - loopStart) % 360
+				if sinceNode >= NODE_EVERY and (p < 45 or p > 315) then
 					dropNode(cursor)
 					sinceNode = 0
 				end
 			end
-			currentPitch -= 360 -- full circle: back where we started, pitch-wise
+			currentPitch -= 360 -- full circle: back to the incoming pitch
 			continue
 		end
 

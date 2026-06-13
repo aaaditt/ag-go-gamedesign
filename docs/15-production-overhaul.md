@@ -86,8 +86,8 @@ with more varied pacing (dives, sweepers, technical chicanes, set-pieces).
 ## Phase checklist
 
 - [x] **P1 — Speed rebalance** (Tuning + AIService + rivalCruise + Challenges). ✅ 2026-06-13
-- [ ] **P2 — Loop fix + scale-up** (TrackGen loop geometry; lead-in/exit rules).
-- [ ] **P3 — Track length redesign** (all 9 tracks ≥ 60 s; timeLimit pars).
+- [x] **P2 — Loop fix + scale-up** (TrackGen loop geometry; lead-in/exit rules). ✅ 2026-06-13
+- [x] **P3 — Track length redesign** (all 9 tracks ≥ 60 s; timeLimit pars). ✅ 2026-06-13
 - [ ] **P4 — Graphics pass** (atmosphere, road dressing, roadside props, karts).
 - [ ] **P5 — Hardening + bug hunt** (fix found bugs; DataStore/MP edge cases).
 - [ ] **P6 — Verification-gate protocol** (in-Studio test script + results sheet).
@@ -107,9 +107,28 @@ matching box in docs/13.
 
 ---
 
+## Playtest watch-list (for the in-Studio verification pass, P6)
+
+- **Gap clearance.** At half speed, crossing a `jump` gap (44–54 studs) relies on
+  gliding (hold Space; fall capped at 14 studs/s) more than raw momentum. Confirm
+  every gap is glideable; shorten any that aren't (edit the `jump()` gapLen).
+- **Exact lap times.** Targets are ~60–110 s but the true average speed depends on
+  how aggressively a player boosts/drifts. Time each track; if any is < 60 s, add
+  a motif or two; if a track drags, trim. Then tune `timeLimit` pars to match.
+- **Big-loop entry/exit.** Confirm loops (radius 95–120) drive cleanly: flat
+  lead-in, no kink, exit road clears the entry road, respawn lands below the loop.
+- **Bot pacing.** With halved `BOT_SPEEDS`, confirm bots are competitive but
+  beatable across the longer tracks; nudge `BOT_SPEEDS`/`rubberband` if needed.
+
 ## Changelog
 
 - 2026-06-13 — Doc created; plan + target numbers locked.
 - 2026-06-13 — **P1 landed**: halved player speeds (Tuning), bot speeds (AIService),
   rivalCruise (Tracks ×9), Versus offset (Challenges −8→−4), InvertMinSpeed 32→16.
   `rojo build` clean. Races now last ~2× longer on the existing track layouts.
+- 2026-06-13 — **P2+P3 landed**: TrackGen loop rewritten (clean vertical loop,
+  parallel exit, radius-independent sideways clearance, step count scales with
+  radius). All 9 tracks rebuilt from a new motif library (esses/rollers/
+  switchback/jump/loopSet/spiral/finishRun) to ~3,200–5,000 studs each for ≥60 s
+  laps; loops are now grand radius-95–120 set-pieces; `timeLimit` pars raised.
+  `rojo build` clean. Exact lap timings pending the P6 playtest.
