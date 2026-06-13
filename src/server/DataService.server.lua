@@ -12,6 +12,14 @@ local RunService = game:GetService("RunService")
 local KartParts = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("KartParts"))
 local Challenges = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Challenges"))
 local Characters = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Characters"))
+local Tracks = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Tracks"))
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("GameConfig"))
+
+-- every boss id (for the "recruited them all" milestone)
+local allBosses: { [string]: boolean } = {}
+for _, t in Tracks.list do
+	allBosses[t.bossId] = true
+end
 
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 
@@ -31,6 +39,10 @@ local rewardFxRemote = Instance.new("RemoteEvent")
 rewardFxRemote.Name = "RewardFx"
 rewardFxRemote.Parent = remotes
 
+local saveSettingsRemote = Instance.new("RemoteEvent")
+saveSettingsRemote.Name = "SaveSettings"
+saveSettingsRemote.Parent = remotes
+
 local leaderboardFn = Instance.new("RemoteFunction")
 leaderboardFn.Name = "GetLeaderboard"
 leaderboardFn.Parent = remotes
@@ -38,6 +50,16 @@ leaderboardFn.Parent = remotes
 local rebuildKartBus = Instance.new("BindableEvent")
 rebuildKartBus.Name = "RebuildKartBus"
 rebuildKartBus.Parent = ServerStorage
+
+-- docs/15 P9: milestone signals (BadgeService + AnalyticsService listen) and a
+-- coin-grant inlet (MonetizationService fires it after a validated purchase).
+local milestoneBus = Instance.new("BindableEvent")
+milestoneBus.Name = "MilestoneBus"
+milestoneBus.Parent = ServerStorage
+
+local grantCoinsBus = Instance.new("BindableEvent")
+grantCoinsBus.Name = "GrantCoinsBus"
+grantCoinsBus.Parent = ServerStorage
 
 local store = nil
 pcall(function()
@@ -54,6 +76,7 @@ type Profile = {
 	recruited: { [string]: boolean },
 	stars: { [string]: number },
 	bestTimes: { [string]: number },
+	settings: { [string]: any },
 }
 
 local function defaultProfile(): Profile
@@ -71,6 +94,7 @@ local function defaultProfile(): Profile
 		recruited = {},
 		stars = {},
 		bestTimes = {},
+		settings = { music = 0.6, sfx = 0.8, shake = true, tutorialDone = false },
 	}
 end
 
@@ -97,6 +121,7 @@ local function publish(player: Player)
 	end
 	player:SetAttribute("UnlockedChars", table.concat(unlocked, ","))
 	player:SetAttribute("StarsJson", HttpService:JSONEncode(p.stars))
+	player:SetAttribute("SettingsJson", HttpService:JSONEncode(p.settings))
 end
 
 -- ============ load/save ============
@@ -206,6 +231,45 @@ upgradePartRemote.OnServerEvent:Connect(function(player, partId)
 	publish(player)
 end)
 
+-- ============ settings persistence (docs/15 P7) ============
+local ALLOWED_SETTINGS = { music = "number", sfx = "number", shake = "boolean", tutorialDone = "boolean" }
+saveSettingsRemote.OnServerEvent:Connect(function(player, json)
+	local p = profiles[player]
+	if not p or typeof(json) ~= "string" or #json > 500 then
+		return
+	end
+	local ok, t = pcall(function()
+		return HttpService:JSONDecode(json)
+	end)
+	if not ok or type(t) ~= "table" then
+		return
+	end
+	for k, expected in ALLOWED_SETTINGS do
+		local v = t[k]
+		if typeof(v) == expected then
+			if expected == "number" then
+				v = math.clamp(v, 0, 1)
+			end
+			p.settings[k] = v
+		end
+	end
+	publish(player)
+end)
+
+-- ============ coin grants from MonetizationService (docs/15 P9) ============
+grantCoinsBus.Event:Connect(function(player: Player, coins: number)
+	local p = profiles[player]
+	if not p or typeof(coins) ~= "number" or coins <= 0 then
+		return
+	end
+	p.coins += math.floor(coins)
+	publish(player)
+	save(player) -- purchases persist immediately
+	if player.Parent then
+		rewardFxRemote:FireClient(player, { coins = math.floor(coins), stars = 0 })
+	end
+end)
+
 -- ============ finish validation → rewards (docs/06 lean) ============
 local remotesLaunch = remotes:WaitForChild("RequestLaunch") :: RemoteEvent
 remotesLaunch.OnServerEvent:Connect(function(player)
@@ -249,6 +313,10 @@ reportFinishRemote.OnServerEvent:Connect(function(player, success, timeTaken)
 	end
 	launchTimes[player] = nil
 
+	if def.mode == "Race" then
+		milestoneBus:Fire(player, "race")
+	end
+
 	local place = player:GetAttribute("RacePosition") :: number?
 	local coins = 0
 	local stars = 0
@@ -262,14 +330,26 @@ reportFinishRemote.OnServerEvent:Connect(function(player, success, timeTaken)
 		coins += stars * 50
 		if (p.stars[def.id] or 0) == 0 then
 			coins += 300 -- first clear
+			milestoneBus:Fire(player, "clear")
 		end
 
 		-- Champion Chase recruitment (server-authoritative)
 		if def.mode == "ChampionChase" and place == 1 and def.bossId then
 			p.chaseWins[def.bossId] = (p.chaseWins[def.bossId] or 0) + 1
 			coins += 150 + p.chaseWins[def.bossId] * 100
-			if p.chaseWins[def.bossId] >= (def.winsNeeded or 3) then
+			if p.chaseWins[def.bossId] >= (def.winsNeeded or 3) and not p.recruited[def.bossId] then
 				p.recruited[def.bossId] = true
+				milestoneBus:Fire(player, "recruit", def.bossId)
+				local all = true
+				for boss in allBosses do
+					if not p.recruited[boss] then
+						all = false
+						break
+					end
+				end
+				if all then
+					milestoneBus:Fire(player, "allRecruited")
+				end
 			end
 			stars = math.min(p.chaseWins[def.bossId], 3)
 		end
@@ -283,6 +363,9 @@ reportFinishRemote.OnServerEvent:Connect(function(player, success, timeTaken)
 		coins = 25 -- consolation
 	end
 
+	if player:GetAttribute("VIPDoubleCoins") then
+		coins = math.floor(coins * Config.vipCoinMultiplier)
+	end
 	p.coins += coins
 	publish(player)
 	rewardFxRemote:FireClient(player, { coins = coins, stars = stars })

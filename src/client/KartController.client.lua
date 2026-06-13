@@ -40,6 +40,7 @@ local driftStage = 0
 local boostTimer = 0 -- time left at raised cap
 local boostCap = 0 -- cap while boosting (pad or drift release)
 local frozenUntil = 0 -- boss freeze (Champion Chase)
+local prevOnBoostPad = false -- rising-edge detector for the boost-pad SFX
 
 local lastNodeIdx = 1
 
@@ -255,6 +256,7 @@ local function releaseDrift()
 		speed = math.max(speed, boostCap * 0.92) -- surge
 		hint.Text = ("SKID BOOST x%d!"):format(driftStage)
 		hint.Visible = true
+		Bus.fire("skidBoost", driftStage)
 		task.delay(1, function()
 			if not charging then
 				hint.Visible = false
@@ -445,7 +447,11 @@ RunService.Heartbeat:Connect(function(dt)
 		boostCap = Tuning.BoostPadSpeed
 		boostTimer = math.max(boostTimer, Tuning.BoostPadDuration)
 		speed = math.max(speed, Tuning.BoostPadSpeed)
+		if not prevOnBoostPad then
+			Bus.fire("boostPad")
+		end
 	end
+	prevOnBoostPad = onBoostPad
 	if boostTimer > 0 then
 		boostTimer -= dt
 		if boostTimer <= 0 then

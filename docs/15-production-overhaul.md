@@ -97,6 +97,24 @@ with more varied pacing (dives, sweepers, technical chicanes, set-pieces).
 Each phase: `rojo build` validates → commit → push → tick the box here and the
 matching box in docs/13.
 
+### M8 code-completion phases (P7–P11) — "everything from Claude's end"
+The remaining M8 work, split into **code Claude can ship now** (config-driven,
+dormant until the owner pastes asset/account ids into `src/shared/GameConfig.lua`)
+vs **owner-only** (assets/account/publish — listed at the bottom).
+
+- [x] **P7 — Audio framework + Settings.** ✅ 2026-06-13 — `GameConfig` plug-in
+  sheet; `SoundController` (SFX on bus events + optional engine/music loops);
+  `SettingsUI` (music/SFX sliders, shake toggle, replay-tutorial); settings
+  persisted in the profile (`SaveSettings` remote). Silent until ids are set.
+- [ ] **P8 — FTUE tutorial + hints.** First-run coached steps + persisted flag.
+- [ ] **P9 — Badges / Analytics / Monetization** (server scaffolding, id-gated).
+- [ ] **P10 — VFX juice + bot visual parity + camera shake + perf guidance.**
+- [ ] **P11 — Hardening review** (read services; fix high-confidence bugs).
+
+**Owner-only (cannot be completed in code):** original character/kart *meshes*,
+audio *files*, creating badge/product/pass *ids* on roblox.com, StreamingEnabled
+sign-off, and the publish/questionnaire (docs/13 M8 W8.1/8.3/8.8).
+
 ---
 
 ## Bugs found during the pass (fix in P5 unless urgent)
