@@ -4,18 +4,22 @@
 
 return {
 	-- Speed model (docs/12): engine + slope + caps
-	EngineTopSpeed = 90, -- studs/s, what W alone can reach
-	EngineAccel = 35, -- studs/s^2 while holding W
-	CoastDecel = 7, -- studs/s^2 bleed when not holding W on flat/uphill
-	BrakeDecel = 60, -- studs/s^2 while holding S
-	DownhillMaxSpeed = 140, -- absolute ceiling from gravity alone
-	ExcessDecay = 8, -- studs/s^2 bleed when above your current cap (kept momentum)
-	SlopeAccelFactor = 1.7, -- multiplier on g·sin(slope): steeper = faster gain
+	-- CASUAL REBALANCE (docs/15 P1): all linear speeds/accels halved vs the
+	-- original twitchy tuning. Half speed ⇒ tracks last ~2× longer; the feel is
+	-- preserved because caps AND accels scaled together. Angular/time rates below
+	-- (steer deg/s, grip /s, drift seconds) are deliberately NOT halved.
+	EngineTopSpeed = 45, -- studs/s, what W alone can reach
+	EngineAccel = 18, -- studs/s^2 while holding W
+	CoastDecel = 4, -- studs/s^2 bleed when not holding W on flat/uphill
+	BrakeDecel = 30, -- studs/s^2 while holding S
+	DownhillMaxSpeed = 72, -- absolute ceiling from gravity alone
+	ExcessDecay = 5, -- studs/s^2 bleed when above your current cap (kept momentum)
+	SlopeAccelFactor = 1.3, -- multiplier on g·sin(slope): gentler downhill pull
 	UphillDecelFactor = 0.8, -- climbing genuinely costs speed
 
 	-- Slingshot launch
 	LaunchChargeTime = 1.5,
-	LaunchMaxSpeed = 135,
+	LaunchMaxSpeed = 68,
 	LaunchSweetZone = { 0.85, 1.0 },
 	LaunchPerfectBonus = 1.1,
 
@@ -28,16 +32,16 @@ return {
 	DriftSteerMult = 1.6,
 	DriftGrip = 3.2,
 	DriftStageTimes = { 1.0, 2.2, 3.5 }, -- s held to reach stage 1/2/3
-	DriftBoostSpeeds = { 115, 125, 135 }, -- cap during release boost per stage
+	DriftBoostSpeeds = { 60, 66, 72 }, -- cap during release boost per stage
 	DriftBoostDurations = { 1.0, 1.5, 2.2 }, -- s of boost per stage
 	DriftChargeSteerBonus = 1.6, -- charge rate multiplier at full steering input
 
 	-- Boost pads
-	BoostPadSpeed = 150,
+	BoostPadSpeed = 78,
 	BoostPadDuration = 1.5,
 
 	-- Glide (airborne, hold Space)
-	GlideFallSpeed = 22, -- max fall rate while gliding (studs/s)
+	GlideFallSpeed = 14, -- max fall rate while gliding (studs/s)
 	GlideAirSteerMult = 2.0,
 
 	-- Airborne (not gliding)
@@ -49,7 +53,7 @@ return {
 	HoverGain = 10,
 	HoverMaxVel = 60,
 	GroundRayMargin = 4,
-	InvertMinSpeed = 32, -- slower than this on walls/ceiling (normal.Y < 0.15) = you fall off
+	InvertMinSpeed = 16, -- slower than this on walls/ceiling (normal.Y < 0.15) = you fall off (halved with speeds so loops stay drivable)
 
 	-- Body & camera
 	KartSize = Vector3.new(6, 2, 9),

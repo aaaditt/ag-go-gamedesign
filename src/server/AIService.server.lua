@@ -21,7 +21,8 @@ local BOT_COLORS = {
 	Color3.fromRGB(150, 90, 200),
 }
 -- target cruise speeds per bot (difficulty spread; rubber-band scales these)
-local BOT_SPEEDS = { 62, 68, 73, 78, 83, 88, 93 }
+-- Halved with the casual rebalance (docs/15 P1) to match the slower player kart.
+local BOT_SPEEDS = { 31, 34, 37, 39, 42, 44, 47 }
 local RUBBERBAND_RANGE = 700 -- studs of gap at which the full factor applies
 local RUBBERBAND_MIN, RUBBERBAND_MAX = 0.85, 1.25
 local SLOPE_SPEED_BONUS = 1.4 -- downhill tangent multiplier cap

@@ -71,7 +71,7 @@ end
 local Tracks: { TrackDef } = {
 	-- ============ Episode 1: Sproutway (grassland) ============
 	{
-		id = "e1t1", name = "Sprout Hill", episode = 1, order = 1, theme = GRASS, bossId = "chuck", rivalCruise = 88, timeLimit = 75,
+		id = "e1t1", name = "Sprout Hill", episode = 1, order = 1, theme = GRASS, bossId = "chuck", rivalCruise = 44, timeLimit = 75,
 		segments = {
 			seg(50, -5, 0), seg(80, -13, 0), seg(70, -8, -50), seg(50, -16, 0, { boostPad = true }),
 			seg(80, -10, 55), seg(50, -4, 0), seg(40, -12, -25), seg(45, -3, 0, { boostPad = true }),
@@ -79,7 +79,7 @@ local Tracks: { TrackDef } = {
 		},
 	},
 	{
-		id = "e1t2", name = "Meadow Spiral", episode = 1, order = 2, theme = GRASS, bossId = "blues", rivalCruise = 90, timeLimit = 75,
+		id = "e1t2", name = "Meadow Spiral", episode = 1, order = 2, theme = GRASS, bossId = "blues", rivalCruise = 45, timeLimit = 75,
 		segments = {
 			seg(60, -10, 0), seg(70, -8, 40), seg(50, -18, 0, { boostPad = true }),
 			seg(200, -7, 360, { boostPad = true }), -- full descending corkscrew spiral
@@ -87,7 +87,7 @@ local Tracks: { TrackDef } = {
 		},
 	},
 	{
-		id = "e1t3", name = "Loop-de-Grove", episode = 1, order = 3, theme = GRASS, bossId = "bomb", rivalCruise = 92, timeLimit = 85,
+		id = "e1t3", name = "Loop-de-Grove", episode = 1, order = 3, theme = GRASS, bossId = "bomb", rivalCruise = 46, timeLimit = 85,
 		segments = {
 			seg(40, -6, 0), seg(70, -20, 0, { boostPad = true }),
 			loop(24), -- first vertical loop of the game
@@ -98,14 +98,14 @@ local Tracks: { TrackDef } = {
 	},
 	-- ============ Episode 2: Oink Canyon (desert) ============
 	{
-		id = "e2t1", name = "Dust Gulch", episode = 2, order = 1, theme = CANYON, bossId = "matilda", rivalCruise = 95, timeLimit = 80,
+		id = "e2t1", name = "Dust Gulch", episode = 2, order = 1, theme = CANYON, bossId = "matilda", rivalCruise = 48, timeLimit = 80,
 		segments = {
 			seg(50, -7, 0), seg(70, -12, -30), seg(70, -12, 30), seg(50, -3, 0, { boostPad = true }), seg(35, 13, 0),
 			seg(40, 0, 0, { gap = true }), seg(70, -15, 0), seg(60, -5, -65), seg(70, -9, 0), seg(70, -4, 35), seg(60, -2, 0),
 		},
 	},
 	{
-		id = "e2t2", name = "Hoodoo Helix", episode = 2, order = 2, theme = CANYON, bossId = "hal", rivalCruise = 98, timeLimit = 95,
+		id = "e2t2", name = "Hoodoo Helix", episode = 2, order = 2, theme = CANYON, bossId = "hal", rivalCruise = 49, timeLimit = 95,
 		segments = {
 			seg(60, -11, 0), seg(50, -6, 70), seg(50, -16, 0, { boostPad = true }),
 			seg(280, -6, 540, { boostPad = true }), -- 1.5-turn corkscrew down the hoodoo
@@ -114,7 +114,7 @@ local Tracks: { TrackDef } = {
 		},
 	},
 	{
-		id = "e2t3", name = "Mesa Madness", episode = 2, order = 3, theme = CANYON, bossId = "stella", rivalCruise = 100, timeLimit = 100,
+		id = "e2t3", name = "Mesa Madness", episode = 2, order = 3, theme = CANYON, bossId = "stella", rivalCruise = 50, timeLimit = 100,
 		segments = {
 			seg(40, -5, 0), seg(70, -24, 0, { boostPad = true }),
 			loop(26), seg(40, -10, 0, { boostPad = true }), loop(26), -- double loop!
@@ -125,7 +125,7 @@ local Tracks: { TrackDef } = {
 	},
 	-- ============ Episode 3: Frostfall (ice) ============
 	{
-		id = "e3t1", name = "Powder Corkscrew", episode = 3, order = 1, theme = ICE, bossId = "terence", rivalCruise = 102, timeLimit = 95,
+		id = "e3t1", name = "Powder Corkscrew", episode = 3, order = 1, theme = ICE, bossId = "terence", rivalCruise = 51, timeLimit = 95,
 		segments = {
 			seg(50, -8, 0), seg(70, -14, 35), seg(50, -3, 0, { boostPad = true }),
 			seg(220, -8, 450, { boostPad = true }), -- icy 1.25-turn corkscrew
@@ -133,7 +133,7 @@ local Tracks: { TrackDef } = {
 		},
 	},
 	{
-		id = "e3t2", name = "Glacier Gap", episode = 3, order = 2, theme = ICE, bossId = "bubbles", rivalCruise = 105, timeLimit = 100,
+		id = "e3t2", name = "Glacier Gap", episode = 3, order = 2, theme = ICE, bossId = "bubbles", rivalCruise = 53, timeLimit = 100,
 		segments = {
 			seg(50, -10, 0), seg(60, -18, 0, { boostPad = true }), seg(34, 13, 0), seg(46, 0, 0, { gap = true }),
 			seg(60, -14, -40), loop(28),
@@ -142,7 +142,7 @@ local Tracks: { TrackDef } = {
 		},
 	},
 	{
-		id = "e3t3", name = "Avalanche Apocalypse", episode = 3, order = 3, theme = ICE, bossId = "foreman", rivalCruise = 108, timeLimit = 110,
+		id = "e3t3", name = "Avalanche Apocalypse", episode = 3, order = 3, theme = ICE, bossId = "foreman", rivalCruise = 54, timeLimit = 110,
 		segments = {
 			seg(40, -8, 0), seg(80, -26, 0, { boostPad = true }), -- monster dive
 			loop(30),

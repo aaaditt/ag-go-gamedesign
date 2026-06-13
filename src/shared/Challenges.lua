@@ -49,7 +49,7 @@ for _, t in Tracks.list do
 		},
 		{
 			id = t.id .. "_versus", trackId = t.id, name = "Versus", mode = "Versus",
-			bots = 1, ccRequired = base + CC_RUNG[5], rivalCruise = t.rivalCruise - 8,
+			bots = 1, ccRequired = base + CC_RUNG[5], rivalCruise = t.rivalCruise - 4,
 		},
 		{
 			id = t.id .. "_chase", trackId = t.id, name = "Champion Chase", mode = "ChampionChase",
