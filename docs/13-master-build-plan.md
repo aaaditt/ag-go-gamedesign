@@ -103,10 +103,16 @@ also land here and need the same playtest validation (incl. W6.5 track timing).
 
 - [x] W8.2-lean VFX: stage-colored skid sparks + boost trail emitters
 - [x] W8.4-lean Mobile touch controls (steer/gas/skid/sling-glide buttons); gamepad mapping → next pass
-- [ ] W8.1 Character & kart visual models — needs original art direction session with the owner
-- [ ] W8.3 Audio — needs sound assets chosen/licensed by the owner (no Rovio audio!)
-- [ ] W8.5 FTUE tutorial — build after the owner signs off on final flow
-- [ ] W8.6/8.7/8.8 Badges, analytics, perf pass, icon/thumbnails, questionnaire, PUBLISH — requires the owner's Roblox account + branding decision (docs/07 §4)
+- [~] W8.3 Audio — **framework code done** (docs/15 P7: SoundController + GameConfig);
+  owner pastes sound asset ids into GameConfig.sounds (no Rovio audio!).
+- [x] W8.4 Mobile touch + **camera shake** (docs/15 P10); gamepad mapping still TODO.
+- [x] W8.5 FTUE tutorial — **done** (docs/15 P8); copy editable in FTUE.client.lua.
+- [~] W8.6 Badges/analytics/**settings** — **code done** (docs/15 P7/P9: SettingsUI,
+  BadgeService, AnalyticsService); owner creates badge ids on roblox.com.
+- [~] W8.7 Perf + **monetization** — MonetizationService done (docs/15 P9); perf
+  guidance written (StreamingEnabled owner-gated, docs/15); owner creates products.
+- [ ] W8.1 Character & kart visual *models* — needs original art direction (owner).
+- [ ] W8.8 Icon/thumbnails, questionnaire, PUBLISH — owner's Roblox account + branding (docs/07 §4).
 
 ## M8 — Presentation, FTUE & ship
 

@@ -119,7 +119,13 @@ vs **owner-only** (assets/account/publish — listed at the bottom).
   ✅ 2026-06-13 — landing dust burst + "landed" event (KartController), shield
   Highlight on the shield power, camera shake on boost/skid/landing (CameraRig,
   honors the settings toggle), bots get the hood/lights. Perf guidance below.
-- [ ] **P11 — Hardening review** (read services; fix high-confidence bugs).
+- [x] **P11 — Hardening review** ✅ 2026-06-13 — reviewed every system my changes
+  touch + the finish/mode/challenge path. Found & fixed the P5 spawn crash;
+  confirmed fruit/gate placement auto-scales (uses spline `line.total`) and the
+  Time Boom pars are now winnable. Surfaced a **latent economy bug the redesign
+  fixes**: `DataService` rejects finishes under 15 s as anti-cheat, but old tracks
+  finished in ~8 s, so *no rewards ever paid out*; ≥60 s laps clear the floor.
+  No new high-confidence bugs; deeper hunt is now playtest-driven (docs/16).
 
 **Owner-only (cannot be completed in code):** original character/kart *meshes*,
 audio *files*, creating badge/product/pass *ids* on roblox.com, StreamingEnabled
@@ -192,6 +198,12 @@ centre-line dashes, or reduce `BOT_COUNT`.
   laps; loops are now grand radius-95–120 set-pieces; `timeLimit` pars raised.
   `rojo build` clean. Exact lap timings pending the P6 playtest.
 - 2026-06-13 — **P5 critical fix**: KartController spawn-crash (see Bugs section).
+- 2026-06-13 — **P7–P11 landed** (M8 code completion): audio framework +
+  settings (P7), FTUE tutorial (P8), badges/analytics/monetization scaffolding
+  (P9), VFX juice + camera shake + bot parity (P10), hardening review (P11). All
+  external-asset/account seams live in `src/shared/GameConfig.lua`. docs/13 M8
+  boxes reconciled. Everything code-side is now done; remaining items are
+  owner-only (art models, audio files, badge/product ids, publish).
 - 2026-06-13 — **P6 landed**: wrote the in-Studio verification protocol
   (docs/16) — 16 tickable sections + a Results log to hand back. Indexed in
   docs/README; the docs/13 gate now points at it.
