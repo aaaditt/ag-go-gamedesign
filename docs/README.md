@@ -18,6 +18,12 @@ This folder is the single source of truth for recreating **Angry Birds Go!** (Ro
 | [08-screens-and-ui.md](08-screens-and-ui.md) | Every screen (S1–S23): navigation map, contents, edge states, input schemes |
 | [09-master-feature-map.md](09-master-feature-map.md) | Exhaustive feature inventory (A–M) with spec cross-refs — if it's not here, it's not in the game |
 | [10-logic-runthrough.md](10-logic-runthrough.md) | Start-to-finish player-journey verification; 12 gaps found and resolved |
+| [11-kart-physics-research.md](11-kart-physics-research.md) | Hover-suspension kart physics research |
+| [12-driving-mechanics-spec.md](12-driving-mechanics-spec.md) | Driving-feel model v3 (the spec behind `Tuning.lua`) |
+| [13-master-build-plan.md](13-master-build-plan.md) | **Execution roadmap** (M0–M8) with milestone checkboxes |
+| [14-world-and-lobby-structure.md](14-world-and-lobby-structure.md) | Lobby-first world structure; hub plaza + portals |
+| [15-production-overhaul.md](15-production-overhaul.md) | **Living tracker** for the slow/long/pretty production overhaul |
+| [16-studio-test-protocol.md](16-studio-test-protocol.md) | **In-Studio verification protocol** — the playtest gate script |
 
 ## How to use these docs
 

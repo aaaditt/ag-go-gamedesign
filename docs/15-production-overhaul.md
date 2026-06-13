@@ -91,7 +91,8 @@ with more varied pacing (dives, sweepers, technical chicanes, set-pieces).
 - [x] **P4 — Graphics pass** (atmosphere, road dressing, roadside props, karts). ✅ 2026-06-13
 - [~] **P5 — Hardening + bug hunt** — critical KartController crash fixed; deeper
   pass continues (mostly playtest-driven, since I can't run Studio).
-- [ ] **P6 — Verification-gate protocol** (in-Studio test script + results sheet).
+- [x] **P6 — Verification-gate protocol** (in-Studio test script + results sheet).
+  ✅ 2026-06-13 — see [16-studio-test-protocol.md](16-studio-test-protocol.md).
 
 Each phase: `rojo build` validates → commit → push → tick the box here and the
 matching box in docs/13.
@@ -147,6 +148,9 @@ matching box in docs/13.
   laps; loops are now grand radius-95–120 set-pieces; `timeLimit` pars raised.
   `rojo build` clean. Exact lap timings pending the P6 playtest.
 - 2026-06-13 — **P5 critical fix**: KartController spawn-crash (see Bugs section).
+- 2026-06-13 — **P6 landed**: wrote the in-Studio verification protocol
+  (docs/16) — 16 tickable sections + a Results log to hand back. Indexed in
+  docs/README; the docs/13 gate now points at it.
 - 2026-06-13 — **P4 landed**: graphics pass. (1) Per-episode atmosphere via
   Lighting (clock/ambient/fog/Atmosphere haze) applied on track load in
   TrackService — bright grassland / golden canyon / cold ice. (2) Dashed centre

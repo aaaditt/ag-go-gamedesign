@@ -74,7 +74,11 @@ The stepwise plan to build everything in docs 01–12, from the current prototyp
 ## ⛔ VERIFICATION GATE — everything above must be playtested before M7/M8 continue
 M0–M6 + leaderboards are code-complete but unverified in Studio. Per execution
 rule 3, multiplayer (M7) and polish (M8) must not stack on an untested core.
-Next session: run the test protocol, fix what breaks, then resume M7.
+**The test protocol is now written: [16-studio-test-protocol.md](16-studio-test-protocol.md).**
+Owner action: run it in Studio, fill its Results log, hand back to Claude to fix
+failures. (One spawn-crash bug was already found by code review and fixed — see
+docs/15.) The casual rebalance + track/loop redesign + graphics pass (docs/15)
+also land here and need the same playtest validation (incl. W6.5 track timing).
 
 ## M6.5 — Wild track geometry (feel-tester directive: "100× crazier") ✅
 
