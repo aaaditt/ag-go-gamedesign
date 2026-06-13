@@ -106,7 +106,10 @@ vs **owner-only** (assets/account/publish — listed at the bottom).
   sheet; `SoundController` (SFX on bus events + optional engine/music loops);
   `SettingsUI` (music/SFX sliders, shake toggle, replay-tutorial); settings
   persisted in the profile (`SaveSettings` remote). Silent until ids are set.
-- [ ] **P8 — FTUE tutorial + hints.** First-run coached steps + persisted flag.
+- [x] **P8 — FTUE tutorial + hints.** ✅ 2026-06-13 — `FTUE` coached overlay:
+  5 steps (launch → steer → skid-boost → glide → power) advancing off bus events
+  with timed fallbacks; persists `tutorialDone`; Skip button; replayable from
+  Settings. Pure overlay, never blocks input.
 - [ ] **P9 — Badges / Analytics / Monetization** (server scaffolding, id-gated).
 - [ ] **P10 — VFX juice + bot visual parity + camera shake + perf guidance.**
 - [ ] **P11 — Hardening review** (read services; fix high-confidence bugs).
