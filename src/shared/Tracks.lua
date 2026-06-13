@@ -20,12 +20,29 @@ export type Segment = {
 
 export type Opts = { gap: boolean?, boostPad: boolean?, loop: boolean?, radius: number? }
 
+-- docs/15 P4: per-episode atmosphere (applied to Lighting on track load) +
+-- procedural roadside prop styling.
+export type Atmosphere = {
+	clockTime: number,
+	ambient: Color3,
+	outdoorAmbient: Color3,
+	fogColor: Color3,
+	fogStart: number,
+	fogEnd: number,
+	brightness: number,
+	haze: number, -- Atmosphere.Haze
+	atmoColor: Color3, -- Atmosphere.Color
+}
+
 export type Theme = {
 	roadColor: Color3,
 	roadMaterial: Enum.Material,
 	railColor: Color3,
 	padColor: Color3,
 	ice: boolean?,
+	propStyle: string, -- "grass" | "canyon" | "ice" — roadside prop set
+	groundColor: Color3, -- valley-floor / ocean tint for the episode
+	atmosphere: Atmosphere,
 }
 
 export type TrackDef = {
@@ -41,23 +58,62 @@ export type TrackDef = {
 }
 
 local GRASS: Theme = {
-	roadColor = Color3.fromRGB(160, 160, 165),
+	roadColor = Color3.fromRGB(150, 152, 158),
 	roadMaterial = Enum.Material.Concrete,
 	railColor = Color3.fromRGB(220, 90, 60),
 	padColor = Color3.fromRGB(120, 200, 120),
+	propStyle = "grass",
+	groundColor = Color3.fromRGB(96, 156, 78),
+	atmosphere = {
+		clockTime = 14, -- bright midday
+		ambient = Color3.fromRGB(120, 125, 120),
+		outdoorAmbient = Color3.fromRGB(150, 160, 150),
+		fogColor = Color3.fromRGB(170, 205, 225),
+		fogStart = 400,
+		fogEnd = 3200,
+		brightness = 2.4,
+		haze = 1.4,
+		atmoColor = Color3.fromRGB(199, 220, 230),
+	},
 }
 local CANYON: Theme = {
-	roadColor = Color3.fromRGB(194, 154, 108),
+	roadColor = Color3.fromRGB(198, 158, 112),
 	roadMaterial = Enum.Material.Slate,
 	railColor = Color3.fromRGB(130, 80, 50),
 	padColor = Color3.fromRGB(230, 190, 120),
+	propStyle = "canyon",
+	groundColor = Color3.fromRGB(168, 120, 78),
+	atmosphere = {
+		clockTime = 16.5, -- warm golden-hour canyon
+		ambient = Color3.fromRGB(135, 110, 85),
+		outdoorAmbient = Color3.fromRGB(170, 135, 100),
+		fogColor = Color3.fromRGB(225, 180, 130),
+		fogStart = 350,
+		fogEnd = 2600,
+		brightness = 2.6,
+		haze = 2.6,
+		atmoColor = Color3.fromRGB(225, 185, 140),
+	},
 }
 local ICE: Theme = {
-	roadColor = Color3.fromRGB(170, 215, 245),
+	roadColor = Color3.fromRGB(178, 222, 248),
 	roadMaterial = Enum.Material.Ice,
 	railColor = Color3.fromRGB(70, 120, 200),
 	padColor = Color3.fromRGB(210, 235, 250),
 	ice = true,
+	propStyle = "ice",
+	groundColor = Color3.fromRGB(214, 230, 244),
+	atmosphere = {
+		clockTime = 9, -- cold overcast morning
+		ambient = Color3.fromRGB(150, 165, 185),
+		outdoorAmbient = Color3.fromRGB(175, 195, 215),
+		fogColor = Color3.fromRGB(205, 222, 238),
+		fogStart = 300,
+		fogEnd = 2200,
+		brightness = 2.2,
+		haze = 3.0,
+		atmoColor = Color3.fromRGB(210, 225, 240),
+	},
 }
 
 local function seg(length: number, pitchDeg: number, yawDeg: number, opts: Opts?): Segment

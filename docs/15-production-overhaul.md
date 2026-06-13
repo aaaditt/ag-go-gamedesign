@@ -88,8 +88,9 @@ with more varied pacing (dives, sweepers, technical chicanes, set-pieces).
 - [x] **P1 — Speed rebalance** (Tuning + AIService + rivalCruise + Challenges). ✅ 2026-06-13
 - [x] **P2 — Loop fix + scale-up** (TrackGen loop geometry; lead-in/exit rules). ✅ 2026-06-13
 - [x] **P3 — Track length redesign** (all 9 tracks ≥ 60 s; timeLimit pars). ✅ 2026-06-13
-- [ ] **P4 — Graphics pass** (atmosphere, road dressing, roadside props, karts).
-- [ ] **P5 — Hardening + bug hunt** (fix found bugs; DataStore/MP edge cases).
+- [x] **P4 — Graphics pass** (atmosphere, road dressing, roadside props, karts). ✅ 2026-06-13
+- [~] **P5 — Hardening + bug hunt** — critical KartController crash fixed; deeper
+  pass continues (mostly playtest-driven, since I can't run Studio).
 - [ ] **P6 — Verification-gate protocol** (in-Studio test script + results sheet).
 
 Each phase: `rojo build` validates → commit → push → tick the box here and the
@@ -122,6 +123,17 @@ matching box in docs/13.
 - **Bot pacing.** With halved `BOT_SPEEDS`, confirm bots are competitive but
   beatable across the longer tracks; nudge `BOT_SPEEDS`/`rubberband` if needed.
 
+## Known follow-ups (not blocking)
+
+- **Bot kart visuals** still bare (colored chassis + nose). Player kart got the
+  hood/lights pass; give bots visual parity in a later polish pass (perf-aware:
+  7 bots).
+- **Skybox.** Using Roblox's procedural dynamic sky + Atmosphere (no Sky textures
+  — keeps it asset-free / IP-safe). A custom skybox is an M8 art option.
+- **Valley floor** is one big flat plane ~900 studs below the start; reads as a
+  distant floor that the descent approaches. Fine as backdrop; per-segment terrain
+  is out of scope.
+
 ## Changelog
 
 - 2026-06-13 — Doc created; plan + target numbers locked.
@@ -134,3 +146,12 @@ matching box in docs/13.
   switchback/jump/loopSet/spiral/finishRun) to ~3,200–5,000 studs each for ≥60 s
   laps; loops are now grand radius-95–120 set-pieces; `timeLimit` pars raised.
   `rojo build` clean. Exact lap timings pending the P6 playtest.
+- 2026-06-13 — **P5 critical fix**: KartController spawn-crash (see Bugs section).
+- 2026-06-13 — **P4 landed**: graphics pass. (1) Per-episode atmosphere via
+  Lighting (clock/ambient/fog/Atmosphere haze) applied on track load in
+  TrackService — bright grassland / golden canyon / cold ice. (2) Dashed centre
+  line on the road. (3) Procedural roadside props per theme (trees+bushes /
+  rocks+cacti / snow-pines+ice-spikes), blocks+balls only, planted in world-up
+  beside right-side-up road. (4) Themed distant valley floor (CanCollide off).
+  (5) Kart hood + head/tail lights. Start height raised 400→1100 so the long new
+  tracks stay above FallY for the whole lap. `rojo build` clean.

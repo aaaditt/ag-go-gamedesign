@@ -6,6 +6,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
+local Lighting = game:GetService("Lighting")
 
 local Tracks = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Tracks"))
 local TrackGen = require(script.Parent:WaitForChild("TrackGen"))
@@ -33,6 +34,29 @@ ocean.Size = Vector3.new(4096, 4, 4096)
 ocean.CFrame = CFrame.new(0, -200, 0)
 ocean.Color = Color3.fromRGB(80, 140, 200)
 ocean.Parent = workspace
+
+-- docs/15 P4: per-episode atmosphere. Lighting is global and replicates to all
+-- clients, so set it once when a track becomes active. (No other script writes
+-- Lighting, so there's nothing to fight.)
+local function applyAtmosphere(def: Tracks.TrackDef)
+	local atmo = def.theme.atmosphere
+	Lighting.ClockTime = atmo.clockTime
+	Lighting.Ambient = atmo.ambient
+	Lighting.OutdoorAmbient = atmo.outdoorAmbient
+	Lighting.FogColor = atmo.fogColor
+	Lighting.FogStart = atmo.fogStart
+	Lighting.FogEnd = atmo.fogEnd
+	Lighting.Brightness = atmo.brightness
+	local a = Lighting:FindFirstChildOfClass("Atmosphere")
+	if not a then
+		a = Instance.new("Atmosphere")
+		a.Parent = Lighting
+	end
+	a.Density = 0.32
+	a.Haze = atmo.haze
+	a.Color = atmo.atmoColor
+	ocean.Color = def.theme.groundColor
+end
 
 local activeId: string? = nil
 
@@ -75,6 +99,7 @@ local function loadTrack(id: string)
 
 	activeId = id
 	workspace:SetAttribute("ActiveTrackId", id)
+	applyAtmosphere(def)
 	trackChangedBus:Fire(id)
 
 	-- respawn every player's kart at the new start pad
@@ -117,5 +142,9 @@ if not workspace:FindFirstChild("Track") then
 	loadTrack(Tracks.DEFAULT)
 else
 	workspace:SetAttribute("ActiveTrackId", activeId)
+	local def = activeId and Tracks.byId[activeId]
+	if def then
+		applyAtmosphere(def)
+	end
 	trackChangedBus:Fire(activeId)
 end

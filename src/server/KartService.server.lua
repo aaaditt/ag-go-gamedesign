@@ -110,6 +110,31 @@ local function buildKart(player: Player): Model
 		weldTo(fin)
 	end
 
+	-- cosmetic shell + lights (docs/15 P4) — massless, weld to the chassis
+	local hood = Instance.new("Part")
+	hood.Size = Vector3.new(Tuning.KartSize.X - 1.2, 1.6, Tuning.KartSize.Z * 0.5)
+	hood.Color = chassis.Color
+	hood.Material = Enum.Material.SmoothPlastic
+	hood.CFrame = chassis.CFrame * CFrame.new(0, Tuning.KartSize.Y / 2 + 0.6, -1)
+	weldTo(hood)
+
+	for _, sx in { -1, 1 } do
+		local headlight = Instance.new("Part")
+		headlight.Shape = Enum.PartType.Ball
+		headlight.Size = Vector3.new(1.3, 1.3, 1.3)
+		headlight.Color = Color3.fromRGB(255, 245, 200)
+		headlight.Material = Enum.Material.Neon
+		headlight.CFrame = chassis.CFrame * CFrame.new(sx * 2, 0.2, -Tuning.KartSize.Z / 2 - 0.4)
+		weldTo(headlight)
+
+		local tail = Instance.new("Part")
+		tail.Size = Vector3.new(1, 0.8, 0.4)
+		tail.Color = Color3.fromRGB(220, 40, 40)
+		tail.Material = Enum.Material.Neon
+		tail.CFrame = chassis.CFrame * CFrame.new(sx * 2, 0.6, Tuning.KartSize.Z / 2 + 0.2)
+		weldTo(tail)
+	end
+
 	local seat = Instance.new("Seat")
 	seat.Size = Vector3.new(3, 1, 3)
 	seat.Color = Color3.fromRGB(50, 50, 50)
