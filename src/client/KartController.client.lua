@@ -43,6 +43,13 @@ local frozenUntil = 0 -- boss freeze (Champion Chase)
 
 local lastNodeIdx = 1
 
+-- HUD elements forward-declared here so findKart() (defined below, but lexically
+-- ABOVE the HUD construction block) captures these locals instead of nil globals.
+-- Lua binds upvalues by lexical position at definition time, not by runtime order.
+local chargeBack: Frame
+local chargeFill: Frame
+local hint: TextLabel
+
 -- ============ find my kart ============
 local function syncHeadingFromChassis()
 	if not chassis then
@@ -116,7 +123,7 @@ gui.Name = "DriveHUD"
 gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
-local chargeBack = Instance.new("Frame")
+chargeBack = Instance.new("Frame")
 chargeBack.Size = UDim2.new(0.3, 0, 0.03, 0)
 chargeBack.Position = UDim2.new(0.35, 0, 0.85, 0)
 chargeBack.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
@@ -129,7 +136,7 @@ sweetZone.Position = UDim2.new(Tuning.LaunchSweetZone[1], 0, 0, 0)
 sweetZone.BackgroundColor3 = Color3.fromRGB(80, 200, 90)
 sweetZone.Parent = chargeBack
 
-local chargeFill = Instance.new("Frame")
+chargeFill = Instance.new("Frame")
 chargeFill.Size = UDim2.new(0, 0, 1, 0)
 chargeFill.BackgroundColor3 = Color3.fromRGB(255, 200, 60)
 chargeFill.BackgroundTransparency = 0.2
@@ -154,7 +161,7 @@ driftLabel.TextStrokeTransparency = 0.3
 driftLabel.Text = ""
 driftLabel.Parent = gui
 
-local hint = Instance.new("TextLabel")
+hint = Instance.new("TextLabel")
 hint.Size = UDim2.new(0.6, 0, 0.04, 0)
 hint.Position = UDim2.new(0.2, 0, 0.79, 0)
 hint.BackgroundTransparency = 1

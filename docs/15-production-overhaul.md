@@ -99,11 +99,13 @@ matching box in docs/13.
 
 ## Bugs found during the pass (fix in P5 unless urgent)
 
-- **KartController HUD scoping bug** — `findKart()` (defined ~L58) references
-  `chargeBack`/`chargeFill`/`hint`, but those locals are declared later (~L119+).
-  In Lua those resolve to *globals* (nil) at definition time, so `findKart` throws
-  "attempt to index nil" the moment a kart spawns. Never caught because M0–M6 was
-  never playtested. Fix: declare the HUD block **above** `findKart`.
+- ✅ **KartController HUD scoping bug** (FIXED 2026-06-13) — `findKart()` (defined
+  ~L58) referenced `chargeBack`/`chargeFill`/`hint`, declared later (~L119+), so
+  they resolved to nil globals and `findKart` threw "attempt to index nil" the
+  moment a kart spawned. Fixed by forward-declaring those three names above
+  `findKart` and dropping `local` at the real assignment sites. Scanned the other
+  client scripts — the rest use anonymous `task.spawn` placed after setup, so no
+  sibling instances of this bug. Play mode no longer crashes on kart spawn.
 
 ---
 
